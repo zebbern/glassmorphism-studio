@@ -189,9 +189,9 @@ export function LayoutBuilder({
     icon: string;
     maxCols: number;
   }[] = [
-    { id: "mobile", name: "Mobile", width: 375, icon: "📱", maxCols: 2 },
-    { id: "tablet", name: "Tablet", width: 768, icon: "📱", maxCols: 4 },
-    { id: "desktop", name: "Desktop", width: 1280, icon: "🖥️", maxCols: 6 },
+    { id: "mobile", name: "Mobile", width: 375, icon: "📱", maxCols: 4 },
+    { id: "tablet", name: "Tablet", width: 768, icon: "📱", maxCols: 8 },
+    { id: "desktop", name: "Desktop", width: 1280, icon: "🖥️", maxCols: 12 },
   ];
 
   // Handle breakpoint change
@@ -1000,29 +1000,6 @@ ${cellsJsx}
           ))}
         </div>
 
-        {/* Responsive Breakpoints */}
-        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
-          {breakpoints.map((bp) => (
-            <button
-              key={bp.id}
-              onClick={() => handleBreakpointChange(bp.id)}
-              title={`${bp.name} (${bp.width}px)`}
-              className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors text-xs",
-                activeBreakpoint === bp.id
-                  ? "bg-cyan-500/30 text-cyan-400"
-                  : "text-white/50 hover:bg-white/10 hover:text-white",
-              )}
-            >
-              <span>{bp.icon}</span>
-              <span className="hidden sm:inline">{bp.name}</span>
-            </button>
-          ))}
-          <span className="text-[10px] text-white/30 ml-1">
-            {breakpoints.find((b) => b.id === activeBreakpoint)?.width}px
-          </span>
-        </div>
-
         {/* Actions */}
         <div className="flex items-center gap-2">
           {/* Undo/Redo Buttons */}
@@ -1255,51 +1232,44 @@ ${cellsJsx}
         {/* Grid Preview */}
         <div className="flex-1">
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-            {/* Grid Settings */}
-            <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/10">
+            {/* Add Box Button */}
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-white/50">Rows:</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={6}
-                  value={layout.rows}
-                  onChange={(e) =>
-                    updateLayoutSettings({
-                      rows: parseInt(e.target.value) || 1,
-                    })
-                  }
-                  className="w-12 px-2 py-1 rounded bg-white/10 border border-white/20 text-white text-sm text-center"
-                />
+                <button
+                  onClick={() => {
+                    // Add a new cell at the next available position
+                    const newId = `cell-${Date.now()}`;
+                    const newRow =
+                      layout.cells.length > 0
+                        ? Math.max(
+                            ...layout.cells.map((c) => c.row + c.rowSpan),
+                          )
+                        : 0;
+                    const newCell: GridCell = {
+                      id: newId,
+                      row: Math.min(newRow, layout.rows - 1),
+                      col: 0,
+                      rowSpan: 1,
+                      colSpan: Math.min(4, layout.cols), // Default to 1/3 width (on 12-col grid)
+                    };
+                    applyLayout({
+                      ...layout,
+                      rows: Math.max(layout.rows, newRow + 1),
+                      cells: [...layout.cells, newCell],
+                    });
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/30 text-sm text-cyan-400 transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add Box
+                </button>
+                <span className="text-xs text-white/40">
+                  {layout.cells.length} box
+                  {layout.cells.length !== 1 ? "es" : ""}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-white/50">Cols:</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={6}
-                  value={layout.cols}
-                  onChange={(e) =>
-                    updateLayoutSettings({
-                      cols: parseInt(e.target.value) || 1,
-                    })
-                  }
-                  className="w-12 px-2 py-1 rounded bg-white/10 border border-white/20 text-white text-sm text-center"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-white/50">Gap:</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={48}
-                  value={layout.gap}
-                  onChange={(e) =>
-                    updateLayoutSettings({ gap: parseInt(e.target.value) || 0 })
-                  }
-                  className="w-12 px-2 py-1 rounded bg-white/10 border border-white/20 text-white text-sm text-center"
-                />
-              </div>
+              <span className="text-xs text-white/30">
+                Drag templates or click boxes to edit
+              </span>
             </div>
 
             {/* Grid Container - Relative for overlay */}
@@ -1330,7 +1300,7 @@ ${cellsJsx}
               {/* Main Grid */}
               <div
                 ref={gridRef}
-                className="grid min-h-[400px] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600/30 via-pink-500/30 to-orange-400/30 p-4"
+                className="grid min-h-[400px] rounded-lg overflow-hidden bg-transparent p-4 border border-dashed border-white/10"
                 style={{
                   gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
                   gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
@@ -1348,13 +1318,25 @@ ${cellsJsx}
                   return (
                     <div
                       key={cell.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("moveCellId", cell.id);
+                        // Make resizing logic check fail so we don't drag while resizing
+                        if (isResizing) {
+                          e.preventDefault();
+                          return;
+                        }
+                      }}
                       onClick={(e) => handleCellClick(cell.id, e)}
                       onDragOver={(e) => {
                         e.preventDefault();
-                        e.currentTarget.classList.add(
-                          "ring-2",
-                          "ring-cyan-400",
-                        );
+                        // Only add ring if not resizing
+                        if (!isResizing) {
+                          e.currentTarget.classList.add(
+                            "ring-2",
+                            "ring-cyan-400",
+                          );
+                        }
                       }}
                       onDragLeave={(e) => {
                         e.currentTarget.classList.remove(
@@ -1368,6 +1350,36 @@ ${cellsJsx}
                           "ring-2",
                           "ring-cyan-400",
                         );
+
+                        // Handle cell reordering/swapping
+                        const moveCellId = e.dataTransfer.getData("moveCellId");
+                        if (moveCellId) {
+                          if (moveCellId === cell.id) return;
+
+                          const sourceCell = layout.cells.find(
+                            (c) => c.id === moveCellId,
+                          );
+                          if (sourceCell) {
+                            // Swap coordinates between source and target
+                            const updatedCells = layout.cells.map((c) => {
+                              if (c.id === moveCellId) {
+                                return { ...c, row: cell.row, col: cell.col };
+                              }
+                              if (c.id === cell.id) {
+                                return {
+                                  ...c,
+                                  row: sourceCell.row,
+                                  col: sourceCell.col,
+                                };
+                              }
+                              return c;
+                            });
+                            applyLayout({ ...layout, cells: updatedCells });
+                          }
+                          return;
+                        }
+
+                        // Handle template drop
                         const templateId = e.dataTransfer.getData(
                           "templateId",
                         ) as ComponentTemplateId;
@@ -1456,25 +1468,46 @@ ${cellsJsx}
                         </>
                       )}
 
-                      {/* Cell Controls */}
-                      {selectedCellId === cell.id && cell.componentId && (
-                        <div className="absolute top-2 right-2 flex gap-1">
+                      {/* Cell Controls - show on all selected cells */}
+                      {selectedCellId === cell.id && (
+                        <div className="absolute top-2 right-2 flex gap-1 z-20">
+                          {cell.componentId && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowTemplates(false); // Switch to edit panel
+                              }}
+                              title="Edit Card"
+                              className="p-1.5 rounded-md bg-cyan-500/80 text-white hover:bg-cyan-500 transition-colors"
+                            >
+                              <Settings2 className="w-3 h-3" />
+                            </button>
+                          )}
+                          {cell.componentId && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearCell(cell.id);
+                              }}
+                              title="Clear Card Content"
+                              className="p-1.5 rounded-md bg-orange-500/80 text-white hover:bg-orange-500 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setShowTemplates(false); // Switch to edit panel
+                              // Remove the cell entirely from the layout
+                              applyLayout({
+                                ...layout,
+                                cells: layout.cells.filter(
+                                  (c) => c.id !== cell.id,
+                                ),
+                              });
+                              selectCell(null as unknown as string);
                             }}
-                            title="Edit Card"
-                            className="p-1.5 rounded-md bg-cyan-500/80 text-white hover:bg-cyan-500 transition-colors"
-                          >
-                            <Settings2 className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              clearCell(cell.id);
-                            }}
-                            title="Remove Card"
+                            title="Delete Box"
                             className="p-1.5 rounded-md bg-red-500/80 text-white hover:bg-red-500 transition-colors"
                           >
                             <Trash2 className="w-3 h-3" />
