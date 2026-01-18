@@ -242,6 +242,12 @@ export type ComponentTemplateId =
   | "notification-toast"
   | "sidebar-nav"
   | "music-player"
+  | "hero-section"
+  | "footer-section"
+  | "nav-bar"
+  | "data-table"
+  | "image-gallery"
+  | "contact-form"
   | "empty";
 
 export interface GridCell {

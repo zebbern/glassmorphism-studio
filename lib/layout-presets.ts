@@ -298,6 +298,92 @@ export const templateInfo: TemplateInfo[] = [
     },
   },
 
+  // Layout category - NEW
+  {
+    id: "hero-section",
+    name: "Hero Section",
+    description: "Landing page hero with CTA",
+    icon: "🚀",
+    category: "layout",
+    defaultContent: {
+      title: "Build Something Amazing",
+      subtitle: "The Next Generation Platform",
+      description:
+        "Create stunning applications with our powerful tools and beautiful components.",
+      primaryButtonText: "Get Started",
+      secondaryButtonText: "Watch Demo",
+      showRating: true,
+      ratingCount: 2500,
+      ratingValue: "4.9",
+    },
+  },
+  {
+    id: "footer-section",
+    name: "Footer",
+    description: "Site footer with links",
+    icon: "📋",
+    category: "layout",
+    defaultContent: {
+      companyName: "GlassUI",
+      tagline: "Beautiful glassmorphic components",
+      copyright: "© 2024 All rights reserved",
+      showSocial: true,
+      showLinks: true,
+    },
+  },
+  {
+    id: "nav-bar",
+    name: "Navigation Bar",
+    description: "Top navigation with search",
+    icon: "🧭",
+    category: "navigation",
+    defaultContent: {
+      logo: "GlassUI",
+      showSearch: true,
+      showNotifications: true,
+      showProfile: true,
+      menuItems: ["Home", "Features", "Pricing", "About"],
+    },
+  },
+  {
+    id: "data-table",
+    name: "Data Table",
+    description: "Sortable data table",
+    icon: "📊",
+    category: "widgets",
+    defaultContent: {
+      title: "Users",
+      showSearch: true,
+      showFilter: true,
+      columns: ["Name", "Email", "Status", "Role"],
+    },
+  },
+  {
+    id: "image-gallery",
+    name: "Image Gallery",
+    description: "Grid gallery with actions",
+    icon: "🖼️",
+    category: "media",
+    defaultContent: {
+      title: "Gallery",
+      showViewToggle: true,
+      columns: 3,
+    },
+  },
+  {
+    id: "contact-form",
+    name: "Contact Form",
+    description: "Contact form with info",
+    icon: "✉️",
+    category: "forms",
+    defaultContent: {
+      title: "Get in Touch",
+      subtitle: "We'd love to hear from you!",
+      showContactInfo: true,
+      buttonText: "Send Message",
+    },
+  },
+
   // Empty placeholder
   {
     id: "empty",
@@ -325,5 +411,5 @@ export function getTemplatesByCategory(
 
 // Get all categories
 export function getTemplateCategories(): TemplateInfo["category"][] {
-  return ["cards", "forms", "widgets", "navigation", "media"];
+  return ["cards", "forms", "widgets", "navigation", "media", "layout"];
 }

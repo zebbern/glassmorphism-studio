@@ -168,12 +168,22 @@ interface UseLayoutBuilderReturn {
   isDragging: boolean;
   dragOverCell: DropZone | null;
 
+  // History state
+  canUndo: boolean;
+  canRedo: boolean;
+  historyIndex: number;
+  historyLength: number;
+
   // Layout actions
   setLayout: (layout: GridLayout) => void;
   loadPreset: (presetId: LayoutPresetId) => void;
   updateLayoutSettings: (
     settings: Partial<Pick<GridLayout, "name" | "rows" | "cols" | "gap">>,
   ) => void;
+
+  // History actions
+  undo: () => void;
+  redo: () => void;
 
   // Cell actions
   selectCell: (cellId: string | null) => void;
@@ -208,32 +218,96 @@ interface UseLayoutBuilderReturn {
 export function useLayoutBuilder(
   initialPreset: LayoutPresetId = "grid-2x2",
 ): UseLayoutBuilderReturn {
-  const [layout, setLayout] = useState<GridLayout>(() => {
+  // Get initial layout from preset
+  const getInitialLayout = useCallback((): GridLayout => {
     const preset = defaultLayoutPresets.find(
       (p: LayoutPreset) => p.id === initialPreset,
     );
     return preset?.layout || getDefaultLayoutInline();
-  });
+  }, [initialPreset]);
+
+  const [layout, setLayoutInternal] = useState<GridLayout>(getInitialLayout);
+
+  // History management
+  const [history, setHistory] = useState<GridLayout[]>(() => [
+    getInitialLayout(),
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const MAX_HISTORY = 50;
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Apply layout update and record to history
+  const updateLayoutWithHistory = useCallback(
+    (updater: GridLayout | ((prev: GridLayout) => GridLayout)) => {
+      setLayoutInternal((prev) => {
+        const newLayout =
+          typeof updater === "function" ? updater(prev) : updater;
+
+        // Push to history
+        setHistory((prevHistory) => {
+          const newHistory = prevHistory.slice(0, historyIndex + 1);
+          newHistory.push(JSON.parse(JSON.stringify(newLayout)));
+          if (newHistory.length > MAX_HISTORY) {
+            newHistory.shift();
+          }
+          return newHistory;
+        });
+        setHistoryIndex((idx) => Math.min(idx + 1, MAX_HISTORY - 1));
+
+        return newLayout;
+      });
+    },
+    [historyIndex],
+  );
+
+  // Public setLayout that tracks history
+  const setLayout = useCallback(
+    (newLayout: GridLayout) => {
+      updateLayoutWithHistory(newLayout);
+    },
+    [updateLayoutWithHistory],
+  );
+
+  // Undo action
+  const undo = useCallback(() => {
+    if (!canUndo) return;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setLayoutInternal(JSON.parse(JSON.stringify(history[newIndex])));
+  }, [canUndo, historyIndex, history]);
+
+  // Redo action
+  const redo = useCallback(() => {
+    if (!canRedo) return;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setLayoutInternal(JSON.parse(JSON.stringify(history[newIndex])));
+  }, [canRedo, historyIndex, history]);
 
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<DropZone | null>(null);
 
   // Load a preset layout
-  const loadPreset = useCallback((presetId: LayoutPresetId) => {
-    const preset = defaultLayoutPresets.find(
-      (p: LayoutPreset) => p.id === presetId,
-    );
-    if (preset) {
-      setLayout({ ...preset.layout, id: generateId() });
-      setSelectedCellId(null);
-    }
-  }, []);
+  const loadPreset = useCallback(
+    (presetId: LayoutPresetId) => {
+      const preset = defaultLayoutPresets.find(
+        (p: LayoutPreset) => p.id === presetId,
+      );
+      if (preset) {
+        updateLayoutWithHistory({ ...preset.layout, id: generateId() });
+        setSelectedCellId(null);
+      }
+    },
+    [updateLayoutWithHistory],
+  );
 
   // Update layout settings (rows, cols, gap, name)
   const updateLayoutSettings = useCallback(
     (settings: Partial<Pick<GridLayout, "name" | "rows" | "cols" | "gap">>) => {
-      setLayout((prev) => {
+      updateLayoutWithHistory((prev: GridLayout) => {
         const updated = { ...prev, ...settings };
 
         // If rows/cols changed, we may need to adjust cells
@@ -243,11 +317,11 @@ export function useLayoutBuilder(
 
           // Filter out cells that are now outside the grid
           updated.cells = prev.cells.filter(
-            (cell) => cell.row < newRows && cell.col < newCols,
+            (cell: GridCell) => cell.row < newRows && cell.col < newCols,
           );
 
           // Adjust cells that span outside
-          updated.cells = updated.cells.map((cell) => ({
+          updated.cells = updated.cells.map((cell: GridCell) => ({
             ...cell,
             rowSpan: Math.min(cell.rowSpan, newRows - cell.row),
             colSpan: Math.min(cell.colSpan, newCols - cell.col),
@@ -257,7 +331,7 @@ export function useLayoutBuilder(
         return updated;
       });
     },
-    [],
+    [updateLayoutWithHistory],
   );
 
   // Select a cell
@@ -266,55 +340,61 @@ export function useLayoutBuilder(
   }, []);
 
   // Add a new cell
-  const addCell = useCallback((cell: Omit<GridCell, "id">) => {
-    const newCell: GridCell = {
-      ...cell,
-      id: generateId(),
-    };
-    setLayout((prev) => ({
-      ...prev,
-      cells: [...prev.cells, newCell],
-    }));
-  }, []);
+  const addCell = useCallback(
+    (cell: Omit<GridCell, "id">) => {
+      const newCell: GridCell = {
+        ...cell,
+        id: generateId(),
+      };
+      updateLayoutWithHistory((prev: GridLayout) => ({
+        ...prev,
+        cells: [...prev.cells, newCell],
+      }));
+    },
+    [updateLayoutWithHistory],
+  );
 
   // Update an existing cell
   const updateCell = useCallback(
     (cellId: string, updates: Partial<GridCell>) => {
-      setLayout((prev) => ({
+      updateLayoutWithHistory((prev: GridLayout) => ({
         ...prev,
-        cells: prev.cells.map((cell) =>
+        cells: prev.cells.map((cell: GridCell) =>
           cell.id === cellId ? { ...cell, ...updates } : cell,
         ),
       }));
     },
-    [],
+    [updateLayoutWithHistory],
   );
 
   // Remove a cell entirely
   const removeCell = useCallback(
     (cellId: string) => {
-      setLayout((prev) => ({
+      updateLayoutWithHistory((prev: GridLayout) => ({
         ...prev,
-        cells: prev.cells.filter((cell) => cell.id !== cellId),
+        cells: prev.cells.filter((cell: GridCell) => cell.id !== cellId),
       }));
       if (selectedCellId === cellId) {
         setSelectedCellId(null);
       }
     },
-    [selectedCellId],
+    [selectedCellId, updateLayoutWithHistory],
   );
 
   // Clear a cell's component (keep the cell)
-  const clearCell = useCallback((cellId: string) => {
-    setLayout((prev) => ({
-      ...prev,
-      cells: prev.cells.map((cell) =>
-        cell.id === cellId
-          ? { ...cell, componentId: undefined, content: undefined }
-          : cell,
-      ),
-    }));
-  }, []);
+  const clearCell = useCallback(
+    (cellId: string) => {
+      updateLayoutWithHistory((prev: GridLayout) => ({
+        ...prev,
+        cells: prev.cells.map((cell: GridCell) =>
+          cell.id === cellId
+            ? { ...cell, componentId: undefined, content: undefined }
+            : cell,
+        ),
+      }));
+    },
+    [updateLayoutWithHistory],
+  );
 
   // Place a component in a cell
   const placeComponent = useCallback(
@@ -323,42 +403,45 @@ export function useLayoutBuilder(
       templateId: ComponentTemplateId,
       content?: Record<string, unknown>,
     ) => {
-      setLayout((prev) => ({
+      updateLayoutWithHistory((prev: GridLayout) => ({
         ...prev,
-        cells: prev.cells.map((cell) =>
+        cells: prev.cells.map((cell: GridCell) =>
           cell.id === cellId
             ? { ...cell, componentId: templateId, content }
             : cell,
         ),
       }));
     },
-    [],
+    [updateLayoutWithHistory],
   );
 
   // Move a component from one cell to another
-  const moveComponent = useCallback((fromCellId: string, toCellId: string) => {
-    setLayout((prev) => {
-      const fromCell = prev.cells.find((c) => c.id === fromCellId);
-      if (!fromCell?.componentId) return prev;
+  const moveComponent = useCallback(
+    (fromCellId: string, toCellId: string) => {
+      updateLayoutWithHistory((prev: GridLayout) => {
+        const fromCell = prev.cells.find((c: GridCell) => c.id === fromCellId);
+        if (!fromCell?.componentId) return prev;
 
-      return {
-        ...prev,
-        cells: prev.cells.map((cell) => {
-          if (cell.id === fromCellId) {
-            return { ...cell, componentId: undefined, content: undefined };
-          }
-          if (cell.id === toCellId) {
-            return {
-              ...cell,
-              componentId: fromCell.componentId,
-              content: fromCell.content,
-            };
-          }
-          return cell;
-        }),
-      };
-    });
-  }, []);
+        return {
+          ...prev,
+          cells: prev.cells.map((cell: GridCell) => {
+            if (cell.id === fromCellId) {
+              return { ...cell, componentId: undefined, content: undefined };
+            }
+            if (cell.id === toCellId) {
+              return {
+                ...cell,
+                componentId: fromCell.componentId,
+                content: fromCell.content,
+              };
+            }
+            return cell;
+          }),
+        };
+      });
+    },
+    [updateLayoutWithHistory],
+  );
 
   // Drag & drop handlers
   const startDrag = useCallback(() => setIsDragging(true), []);
@@ -418,9 +501,15 @@ export function useLayoutBuilder(
     selectedCellId,
     isDragging,
     dragOverCell,
+    canUndo,
+    canRedo,
+    historyIndex,
+    historyLength: history.length,
     setLayout,
     loadPreset,
     updateLayoutSettings,
+    undo,
+    redo,
     selectCell,
     addCell,
     updateCell,

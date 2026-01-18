@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   GripVertical,
   Plus,
@@ -16,6 +16,10 @@ import {
   ArrowRight,
   Code,
   FileCode,
+  Undo2,
+  Redo2,
+  GripHorizontal,
+  Move,
 } from "lucide-react";
 import {
   GridCell,
@@ -59,6 +63,18 @@ import {
   SidebarNavContent,
   MusicPlayer,
   MusicPlayerContent,
+  HeroSection,
+  HeroSectionContent,
+  FooterSection,
+  FooterSectionContent,
+  NavBar,
+  NavBarContent,
+  DataTable,
+  DataTableContent,
+  ImageGallery,
+  ImageGalleryContent,
+  ContactForm,
+  ContactFormContent,
 } from "./templates/index";
 
 // Per-cell glass style overrides
@@ -90,6 +106,12 @@ const cardTypes: { id: ComponentTemplateId; name: string; icon: string }[] = [
   { id: "notification-toast", name: "Notification", icon: "🔔" },
   { id: "sidebar-nav", name: "Sidebar Nav", icon: "📋" },
   { id: "music-player", name: "Music Player", icon: "🎵" },
+  { id: "hero-section", name: "Hero Section", icon: "🚀" },
+  { id: "footer-section", name: "Footer", icon: "📋" },
+  { id: "nav-bar", name: "Nav Bar", icon: "🧭" },
+  { id: "data-table", name: "Data Table", icon: "📊" },
+  { id: "image-gallery", name: "Gallery", icon: "🖼️" },
+  { id: "contact-form", name: "Contact Form", icon: "✉️" },
 ];
 
 export function LayoutBuilder({
@@ -112,6 +134,10 @@ export function LayoutBuilder({
     resetLayout,
     exportLayout,
     updateLayoutSettings,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
   } = useLayoutBuilder("grid-2x2");
 
   const [showTemplates, setShowTemplates] = useState(true);
@@ -127,6 +153,127 @@ export function LayoutBuilder({
   const [exportFormat, setExportFormat] = useState<"react" | "html" | "json">(
     "react",
   );
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if focus is in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (
+        ((e.ctrlKey || e.metaKey) && e.key === "y") ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "z")
+      ) {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
+
+  // Cell resize state
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizingCellId, setResizingCellId] = useState<string | null>(null);
+  const [resizeStart, setResizeStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [resizeDirection, setResizeDirection] = useState<
+    "row" | "col" | "both" | null
+  >(null);
+  const gridRef = React.useRef<HTMLDivElement>(null);
+
+  // Handle resize start
+  const handleResizeStart = (
+    e: React.MouseEvent,
+    cellId: string,
+    direction: "row" | "col" | "both",
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizingCellId(cellId);
+    setResizeStart({ x: e.clientX, y: e.clientY });
+    setResizeDirection(direction);
+  };
+
+  // Handle resize move
+  useEffect(() => {
+    if (!isResizing || !resizingCellId || !resizeStart || !gridRef.current)
+      return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      const cell = layout.cells.find((c) => c.id === resizingCellId);
+      if (!cell) return;
+
+      const gridRect = grid.getBoundingClientRect();
+      const cellWidth = gridRect.width / layout.cols;
+      const cellHeight = gridRect.height / layout.rows;
+
+      const deltaX = e.clientX - resizeStart.x;
+      const deltaY = e.clientY - resizeStart.y;
+
+      // Calculate new spans
+      let newColSpan = cell.colSpan;
+      let newRowSpan = cell.rowSpan;
+
+      if (resizeDirection === "col" || resizeDirection === "both") {
+        const colChange = Math.round(deltaX / cellWidth);
+        newColSpan = Math.max(
+          1,
+          Math.min(cell.colSpan + colChange, layout.cols - cell.col),
+        );
+      }
+
+      if (resizeDirection === "row" || resizeDirection === "both") {
+        const rowChange = Math.round(deltaY / cellHeight);
+        newRowSpan = Math.max(
+          1,
+          Math.min(cell.rowSpan + rowChange, layout.rows - cell.row),
+        );
+      }
+
+      // Only update if changed
+      if (newColSpan !== cell.colSpan || newRowSpan !== cell.rowSpan) {
+        updateCell(resizingCellId, {
+          colSpan: newColSpan,
+          rowSpan: newRowSpan,
+        });
+        setResizeStart({ x: e.clientX, y: e.clientY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizingCellId(null);
+      setResizeStart(null);
+      setResizeDirection(null);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [
+    isResizing,
+    resizingCellId,
+    resizeStart,
+    resizeDirection,
+    layout,
+    updateCell,
+  ]);
 
   // Get selected cell
   const selectedCell = useMemo(() => {
@@ -277,6 +424,48 @@ export function LayoutBuilder({
             glassStyle={cellStyle}
           />
         );
+      case "hero-section":
+        return (
+          <HeroSection
+            content={content as unknown as HeroSectionContent}
+            glassStyle={cellStyle}
+          />
+        );
+      case "footer-section":
+        return (
+          <FooterSection
+            content={content as unknown as FooterSectionContent}
+            glassStyle={cellStyle}
+          />
+        );
+      case "nav-bar":
+        return (
+          <NavBar
+            content={content as unknown as NavBarContent}
+            glassStyle={cellStyle}
+          />
+        );
+      case "data-table":
+        return (
+          <DataTable
+            content={content as unknown as DataTableContent}
+            glassStyle={cellStyle}
+          />
+        );
+      case "image-gallery":
+        return (
+          <ImageGallery
+            content={content as unknown as ImageGalleryContent}
+            glassStyle={cellStyle}
+          />
+        );
+      case "contact-form":
+        return (
+          <ContactForm
+            content={content as unknown as ContactFormContent}
+            glassStyle={cellStyle}
+          />
+        );
       default:
         return null;
     }
@@ -338,27 +527,56 @@ ${filledCells
 ${gridHTML}`;
     }
 
-    // React TSX format
-    const imports = new Set<string>();
+    // React TSX format - Build proper imports
+    const componentImports = new Map<string, { component: string; content: string }>();
+    
     filledCells.forEach((cell) => {
-      const template = cardTypes.find((t) => t.id === cell.componentId);
-      if (template) {
+      if (cell.componentId && cell.componentId !== "empty") {
         const componentName = cell
-          .componentId!.split("-")
+          .componentId.split("-")
           .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
           .join("");
-        imports.add(componentName);
+        const contentName = componentName + "Content";
+        componentImports.set(cell.componentId, { component: componentName, content: contentName });
       }
     });
+
+    // Generate import statements
+    const importStatements = Array.from(componentImports.values())
+      .map(({ component, content }) => `import { ${component}, type ${content} } from "@/components/glassmorphic/templates";`)
+      .join("\n");
+
+    // Generate content data for each cell
+    const contentDeclarations = filledCells.map((cell, index) => {
+      const { content } = componentImports.get(cell.componentId!) || { content: "unknown" };
+      return `const cell${index + 1}Content: ${content} = ${JSON.stringify(cell.content, null, 2)};`;
+    }).join("\n\n");
+
+    // Generate JSX for each filled cell
+    const cellsJsx = filledCells.map((cell, index) => {
+      const { component } = componentImports.get(cell.componentId!) || { component: "UnknownComponent" };
+      return `      {/* ${component} - Cell ${index + 1} */}
+      <div
+        style={{
+          gridRow: "${cell.row + 1} / span ${cell.rowSpan}",
+          gridColumn: "${cell.col + 1} / span ${cell.colSpan}",
+        }}
+      >
+        <${component}
+          content={cell${index + 1}Content}
+          glassStyle={glassStyle}
+        />
+      </div>`;
+    }).join("\n\n");
 
     return `"use client";
 
 import React from "react";
-// Import your glassmorphic components
-// ${Array.from(imports)
-      .map((i) => `import { ${i} } from "@/components/glassmorphic";`)
-      .join("\n// ")}
 
+// Component imports
+${importStatements}
+
+// Glass morphism styles
 const glassStyle: React.CSSProperties = {
   background: "rgba(255, 255, 255, ${colorSettings.opacity / 100})",
   backdropFilter: "blur(${settings.blur}px)",
@@ -366,6 +584,9 @@ const glassStyle: React.CSSProperties = {
   border: "1px solid rgba(255, 255, 255, ${settings.borderOpacity})",
   borderRadius: "${settings.borderRadius}px",
 };
+
+// Content data for each component
+${contentDeclarations}
 
 export function GlassmorphicLayout() {
   return (
@@ -377,25 +598,7 @@ export function GlassmorphicLayout() {
         gap: "${layout.gap}px",
       }}
     >
-${filledCells
-  .map((cell) => {
-    const componentName = cell
-      .componentId!.split("-")
-      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-      .join("");
-    return `      {/* ${componentName} */}
-      <div
-        style={{
-          ...glassStyle,
-          gridRow: "${cell.row + 1} / span ${cell.rowSpan}",
-          gridColumn: "${cell.col + 1} / span ${cell.colSpan}",
-        }}
-      >
-        {/* Add your ${componentName} component here */}
-        {/* Content: ${JSON.stringify(cell.content)} */}
-      </div>`;
-  })
-  .join("\n\n")}
+${cellsJsx}
     </div>
   );
 }`;
@@ -629,6 +832,36 @@ ${filledCells
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Undo/Redo Buttons */}
+          <div className="flex items-center gap-1 px-1 py-1 rounded-lg bg-white/5 border border-white/10">
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                canUndo
+                  ? "text-white/70 hover:bg-white/10 hover:text-white"
+                  : "text-white/20 cursor-not-allowed",
+              )}
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                canRedo
+                  ? "text-white/70 hover:bg-white/10 hover:text-white"
+                  : "text-white/20 cursor-not-allowed",
+              )}
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+
           <button
             onClick={() => setShowExportModal(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/30 text-sm text-cyan-400 transition-colors"
@@ -783,89 +1016,163 @@ ${filledCells
               </div>
             </div>
 
-            {/* Grid */}
-            <div
-              className="grid min-h-[400px] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600/30 via-pink-500/30 to-orange-400/30 p-4"
-              style={{
-                gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
-                gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
-                gap: `${layout.gap}px`,
-              }}
-            >
-              {layout.cells.map((cell) => (
+            {/* Grid Container - Relative for overlay */}
+            <div className="relative">
+              {/* Grid Snap Guide Overlay - Shows during resize */}
+              {isResizing && (
                 <div
-                  key={cell.id}
-                  onClick={() => selectCell(cell.id)}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.classList.add("ring-2", "ring-cyan-400");
-                  }}
-                  onDragLeave={(e) => {
-                    e.currentTarget.classList.remove("ring-2", "ring-cyan-400");
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.classList.remove("ring-2", "ring-cyan-400");
-                    const templateId = e.dataTransfer.getData(
-                      "templateId",
-                    ) as ComponentTemplateId;
-                    if (templateId) {
-                      handleDrop(cell.id, templateId);
-                    }
-                  }}
-                  className={cn(
-                    "relative rounded-xl overflow-hidden transition-all cursor-pointer",
-                    selectedCellId === cell.id
-                      ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent"
-                      : "hover:ring-1 hover:ring-white/30",
-                    !cell.componentId &&
-                      "bg-white/5 border-2 border-dashed border-white/20",
-                  )}
+                  className="absolute inset-0 pointer-events-none z-10 p-4"
                   style={{
-                    gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
-                    gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
+                    display: "grid",
+                    gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
+                    gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
+                    gap: `${layout.gap}px`,
                   }}
                 >
-                  {/* Cell Content */}
-                  <div className="w-full h-full">{renderComponent(cell)}</div>
-
-                  {/* Cell Controls */}
-                  {selectedCellId === cell.id && cell.componentId && (
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowTemplates(false); // Switch to edit panel
-                        }}
-                        title="Edit Card"
-                        className="p-1.5 rounded-md bg-cyan-500/80 text-white hover:bg-cyan-500 transition-colors"
-                      >
-                        <Settings2 className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearCell(cell.id);
-                        }}
-                        title="Remove Card"
-                        className="p-1.5 rounded-md bg-red-500/80 text-white hover:bg-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Cell indicator when empty */}
-                  {!cell.componentId && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="text-center">
-                        <Plus className="w-6 h-6 mx-auto mb-1 text-white/20" />
-                        <span className="text-xs text-white/30">Drop here</span>
-                      </div>
-                    </div>
+                  {/* Grid guide cells */}
+                  {Array.from({ length: layout.rows * layout.cols }).map(
+                    (_, index) => (
+                      <div
+                        key={index}
+                        className="border border-dashed border-cyan-400/40 rounded-lg bg-cyan-400/5"
+                      />
+                    ),
                   )}
                 </div>
-              ))}
+              )}
+
+              {/* Main Grid */}
+              <div
+                ref={gridRef}
+                className="grid min-h-[400px] rounded-lg overflow-hidden bg-gradient-to-br from-purple-600/30 via-pink-500/30 to-orange-400/30 p-4"
+                style={{
+                  gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
+                  gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
+                  gap: `${layout.gap}px`,
+                }}
+              >
+                {layout.cells.map((cell) => (
+                  <div
+                    key={cell.id}
+                    onClick={() => selectCell(cell.id)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add("ring-2", "ring-cyan-400");
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove(
+                        "ring-2",
+                        "ring-cyan-400",
+                      );
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove(
+                        "ring-2",
+                        "ring-cyan-400",
+                      );
+                      const templateId = e.dataTransfer.getData(
+                        "templateId",
+                      ) as ComponentTemplateId;
+                      if (templateId) {
+                        handleDrop(cell.id, templateId);
+                      }
+                    }}
+                    className={cn(
+                      "relative rounded-xl overflow-hidden transition-all cursor-pointer group",
+                      selectedCellId === cell.id
+                        ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent"
+                        : "hover:ring-1 hover:ring-white/30",
+                      !cell.componentId &&
+                        "bg-white/5 border-2 border-dashed border-white/20",
+                      isResizing &&
+                        resizingCellId === cell.id &&
+                        "ring-2 ring-yellow-400",
+                    )}
+                    style={{
+                      gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
+                      gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
+                    }}
+                  >
+                    {/* Cell Content */}
+                    <div className="w-full h-full">{renderComponent(cell)}</div>
+
+                    {/* Resize Handles - show on selected cell */}
+                    {selectedCellId === cell.id && (
+                      <>
+                        {/* Right edge - resize column */}
+                        <div
+                          onMouseDown={(e) =>
+                            handleResizeStart(e, cell.id, "col")
+                          }
+                          className="absolute top-0 right-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          title="Drag to resize width"
+                        >
+                          <div className="w-1 h-8 bg-cyan-400 rounded-full" />
+                        </div>
+                        {/* Bottom edge - resize row */}
+                        <div
+                          onMouseDown={(e) =>
+                            handleResizeStart(e, cell.id, "row")
+                          }
+                          className="absolute bottom-0 left-0 w-full h-3 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          title="Drag to resize height"
+                        >
+                          <div className="w-8 h-1 bg-cyan-400 rounded-full" />
+                        </div>
+                        {/* Corner - resize both */}
+                        <div
+                          onMouseDown={(e) =>
+                            handleResizeStart(e, cell.id, "both")
+                          }
+                          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          title="Drag to resize"
+                        >
+                          <div className="w-2 h-2 bg-cyan-400 rounded-sm rotate-45" />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Cell Controls */}
+                    {selectedCellId === cell.id && cell.componentId && (
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowTemplates(false); // Switch to edit panel
+                          }}
+                          title="Edit Card"
+                          className="p-1.5 rounded-md bg-cyan-500/80 text-white hover:bg-cyan-500 transition-colors"
+                        >
+                          <Settings2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearCell(cell.id);
+                          }}
+                          title="Remove Card"
+                          className="p-1.5 rounded-md bg-red-500/80 text-white hover:bg-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Cell indicator when empty */}
+                    {!cell.componentId && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="text-center">
+                          <Plus className="w-6 h-6 mx-auto mb-1 text-white/20" />
+                          <span className="text-xs text-white/30">
+                            Drop here
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
