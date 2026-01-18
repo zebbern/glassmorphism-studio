@@ -259,6 +259,29 @@ export interface GridCell {
   componentId?: ComponentTemplateId;
   content?: Record<string, unknown>;
   glassSettings?: GlassSettings;
+  groupId?: string; // For grouped cells
+}
+
+export interface CellGroup {
+  id: string;
+  cellIds: string[];
+  name?: string;
+}
+
+export type Breakpoint = "mobile" | "tablet" | "desktop";
+
+export interface BreakpointConfig {
+  id: Breakpoint;
+  name: string;
+  width: number;
+  maxCols: number;
+  icon: string;
+}
+
+export interface ResponsiveLayout {
+  desktop: GridLayout;
+  tablet?: GridLayout;
+  mobile?: GridLayout;
 }
 
 export interface GridLayout {
@@ -268,6 +291,7 @@ export interface GridLayout {
   cols: number;
   gap: number;
   cells: GridCell[];
+  groups?: CellGroup[]; // Cell groups
 }
 
 export interface LayoutPreset {

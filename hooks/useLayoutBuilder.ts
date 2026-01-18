@@ -177,6 +177,7 @@ interface UseLayoutBuilderReturn {
   // Layout actions
   setLayout: (layout: GridLayout) => void;
   loadPreset: (presetId: LayoutPresetId) => void;
+  applyLayout: (layout: GridLayout) => void;
   updateLayoutSettings: (
     settings: Partial<Pick<GridLayout, "name" | "rows" | "cols" | "gap">>,
   ) => void;
@@ -491,6 +492,15 @@ export function useLayoutBuilder(
     setSelectedCellId(null);
   }, []);
 
+  // Apply a complete layout (from templates gallery)
+  const applyLayout = useCallback(
+    (newLayout: GridLayout) => {
+      updateLayoutWithHistory({ ...newLayout, id: generateId() });
+      setSelectedCellId(null);
+    },
+    [updateLayoutWithHistory],
+  );
+
   // Export layout as JSON
   const exportLayout = useCallback((): string => {
     return JSON.stringify(layout, null, 2);
@@ -507,6 +517,7 @@ export function useLayoutBuilder(
     historyLength: history.length,
     setLayout,
     loadPreset,
+    applyLayout,
     updateLayoutSettings,
     undo,
     redo,

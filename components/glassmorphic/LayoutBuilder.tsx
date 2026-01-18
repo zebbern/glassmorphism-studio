@@ -20,6 +20,10 @@ import {
   Redo2,
   GripHorizontal,
   Move,
+  Eye,
+  Group,
+  Ungroup,
+  LayoutTemplate,
 } from "lucide-react";
 import {
   GridCell,
@@ -39,6 +43,9 @@ import {
   getTemplateCategories,
 } from "@/lib/layout-presets";
 import { cn } from "@/lib/utils";
+import { PreviewMode } from "./PreviewMode";
+import { TemplatesGallery } from "./TemplatesGallery";
+import { PropsEditor } from "./PropsEditor";
 
 // Import template components
 import { ProfileCard, ProfileCardContent } from "./cards/ProfileCard";
@@ -127,6 +134,7 @@ export function LayoutBuilder({
     selectedCellId,
     isDragging,
     loadPreset,
+    applyLayout,
     selectCell,
     updateCell,
     clearCell,
@@ -146,6 +154,12 @@ export function LayoutBuilder({
   const [cellStyleOverrides, setCellStyleOverrides] = useState<
     Record<string, CellStyleOverride>
   >({});
+
+  // Multi-select state
+  const [selectedCellIds, setSelectedCellIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [editingContent, setEditingContent] = useState<Record<string, unknown>>(
     {},
   );
@@ -153,8 +167,133 @@ export function LayoutBuilder({
   const [exportFormat, setExportFormat] = useState<"react" | "html" | "json">(
     "react",
   );
+  const [showPreview, setShowPreview] = useState(false);
+  const [showTemplatesGallery, setShowTemplatesGallery] = useState(false);
+
+  // Responsive breakpoints state
+  type Breakpoint = "mobile" | "tablet" | "desktop";
+  const [activeBreakpoint, setActiveBreakpoint] =
+    useState<Breakpoint>("desktop");
+  const [responsiveLayouts, setResponsiveLayouts] = useState<
+    Record<Breakpoint, typeof layout | null>
+  >({
+    mobile: null,
+    tablet: null,
+    desktop: null,
+  });
+
+  const breakpoints: {
+    id: Breakpoint;
+    name: string;
+    width: number;
+    icon: string;
+    maxCols: number;
+  }[] = [
+    { id: "mobile", name: "Mobile", width: 375, icon: "📱", maxCols: 2 },
+    { id: "tablet", name: "Tablet", width: 768, icon: "📱", maxCols: 4 },
+    { id: "desktop", name: "Desktop", width: 1280, icon: "🖥️", maxCols: 6 },
+  ];
+
+  // Handle breakpoint change
+  const handleBreakpointChange = (breakpoint: Breakpoint) => {
+    // Save current layout to the active breakpoint
+    setResponsiveLayouts((prev) => ({
+      ...prev,
+      [activeBreakpoint]: JSON.parse(JSON.stringify(layout)),
+    }));
+
+    // Load saved layout for new breakpoint or create one from desktop
+    const savedLayout = responsiveLayouts[breakpoint];
+    if (savedLayout) {
+      applyLayout(savedLayout);
+    } else if (breakpoint !== "desktop") {
+      // First time switching - create responsive version from desktop
+      const bp = breakpoints.find((b) => b.id === breakpoint)!;
+      const responsiveLayout = {
+        ...layout,
+        id: `${layout.id}-${breakpoint}`,
+        cols: Math.min(layout.cols, bp.maxCols),
+        cells: layout.cells.map((cell) => ({
+          ...cell,
+          colSpan: Math.min(cell.colSpan, bp.maxCols),
+          col: Math.min(cell.col, bp.maxCols - 1),
+        })),
+      };
+      applyLayout(responsiveLayout);
+    }
+
+    setActiveBreakpoint(breakpoint);
+  };
 
   // Keyboard shortcuts for undo/redo
+  // Handle multi-select cell click
+  const handleCellClick = (cellId: string, e: React.MouseEvent) => {
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      // Multi-select mode
+      setSelectedCellIds((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(cellId)) {
+          newSet.delete(cellId);
+        } else {
+          newSet.add(cellId);
+        }
+        return newSet;
+      });
+      setIsMultiSelectMode(true);
+    } else {
+      // Single select mode
+      setSelectedCellIds(new Set([cellId]));
+      setIsMultiSelectMode(false);
+      selectCell(cellId);
+    }
+  };
+
+  // Group selected cells
+  const groupSelectedCells = () => {
+    if (selectedCellIds.size < 2) return;
+
+    const groupId = `group-${Date.now()}`;
+    const cellIdsArray = Array.from(selectedCellIds);
+
+    // Update cells with group ID
+    cellIdsArray.forEach((cellId) => {
+      const cell = layout.cells.find((c) => c.id === cellId);
+      if (cell) {
+        updateCell(cellId, { ...cell, groupId });
+      }
+    });
+
+    // Clear multi-select
+    setSelectedCellIds(new Set());
+    setIsMultiSelectMode(false);
+  };
+
+  // Ungroup cells
+  const ungroupCells = (groupId: string) => {
+    layout.cells
+      .filter((c) => c.groupId === groupId)
+      .forEach((cell) => {
+        updateCell(cell.id, { ...cell, groupId: undefined });
+      });
+  };
+
+  // Check if selected cells are in a group
+  const selectedGroup = useMemo(() => {
+    if (selectedCellIds.size === 0) return null;
+    const firstCellId = Array.from(selectedCellIds)[0];
+    const firstCell = layout.cells.find((c) => c.id === firstCellId);
+    if (!firstCell?.groupId) return null;
+
+    // Check if all selected cells are in the same group
+    const allInSameGroup = Array.from(selectedCellIds).every((cellId) => {
+      const cell = layout.cells.find((c) => c.id === cellId);
+      return cell?.groupId === firstCell.groupId;
+    });
+
+    return allInSameGroup ? firstCell.groupId : null;
+  }, [selectedCellIds, layout.cells]);
+
+  // Keyboard shortcuts for undo/redo and group/ungroup
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if focus is in an input/textarea
@@ -170,12 +309,26 @@ export function LayoutBuilder({
       ) {
         e.preventDefault();
         redo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "g" && !e.shiftKey) {
+        // Ctrl+G to group
+        e.preventDefault();
+        groupSelectedCells();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "G") {
+        // Ctrl+Shift+G to ungroup
+        e.preventDefault();
+        if (selectedGroup) {
+          ungroupCells(selectedGroup);
+        }
+      } else if (e.key === "Escape") {
+        // Clear multi-select
+        setSelectedCellIds(new Set());
+        setIsMultiSelectMode(false);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, selectedGroup, selectedCellIds]);
 
   // Cell resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -528,34 +681,50 @@ ${gridHTML}`;
     }
 
     // React TSX format - Build proper imports
-    const componentImports = new Map<string, { component: string; content: string }>();
-    
+    const componentImports = new Map<
+      string,
+      { component: string; content: string }
+    >();
+
     filledCells.forEach((cell) => {
       if (cell.componentId && cell.componentId !== "empty") {
-        const componentName = cell
-          .componentId.split("-")
+        const componentName = cell.componentId
+          .split("-")
           .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
           .join("");
         const contentName = componentName + "Content";
-        componentImports.set(cell.componentId, { component: componentName, content: contentName });
+        componentImports.set(cell.componentId, {
+          component: componentName,
+          content: contentName,
+        });
       }
     });
 
     // Generate import statements
     const importStatements = Array.from(componentImports.values())
-      .map(({ component, content }) => `import { ${component}, type ${content} } from "@/components/glassmorphic/templates";`)
+      .map(
+        ({ component, content }) =>
+          `import { ${component}, type ${content} } from "@/components/glassmorphic/templates";`,
+      )
       .join("\n");
 
     // Generate content data for each cell
-    const contentDeclarations = filledCells.map((cell, index) => {
-      const { content } = componentImports.get(cell.componentId!) || { content: "unknown" };
-      return `const cell${index + 1}Content: ${content} = ${JSON.stringify(cell.content, null, 2)};`;
-    }).join("\n\n");
+    const contentDeclarations = filledCells
+      .map((cell, index) => {
+        const { content } = componentImports.get(cell.componentId!) || {
+          content: "unknown",
+        };
+        return `const cell${index + 1}Content: ${content} = ${JSON.stringify(cell.content, null, 2)};`;
+      })
+      .join("\n\n");
 
     // Generate JSX for each filled cell
-    const cellsJsx = filledCells.map((cell, index) => {
-      const { component } = componentImports.get(cell.componentId!) || { component: "UnknownComponent" };
-      return `      {/* ${component} - Cell ${index + 1} */}
+    const cellsJsx = filledCells
+      .map((cell, index) => {
+        const { component } = componentImports.get(cell.componentId!) || {
+          component: "UnknownComponent",
+        };
+        return `      {/* ${component} - Cell ${index + 1} */}
       <div
         style={{
           gridRow: "${cell.row + 1} / span ${cell.rowSpan}",
@@ -567,7 +736,8 @@ ${gridHTML}`;
           glassStyle={glassStyle}
         />
       </div>`;
-    }).join("\n\n");
+      })
+      .join("\n\n");
 
     return `"use client";
 
@@ -830,6 +1000,29 @@ ${cellsJsx}
           ))}
         </div>
 
+        {/* Responsive Breakpoints */}
+        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+          {breakpoints.map((bp) => (
+            <button
+              key={bp.id}
+              onClick={() => handleBreakpointChange(bp.id)}
+              title={`${bp.name} (${bp.width}px)`}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors text-xs",
+                activeBreakpoint === bp.id
+                  ? "bg-cyan-500/30 text-cyan-400"
+                  : "text-white/50 hover:bg-white/10 hover:text-white",
+              )}
+            >
+              <span>{bp.icon}</span>
+              <span className="hidden sm:inline">{bp.name}</span>
+            </button>
+          ))}
+          <span className="text-[10px] text-white/30 ml-1">
+            {breakpoints.find((b) => b.id === activeBreakpoint)?.width}px
+          </span>
+        </div>
+
         {/* Actions */}
         <div className="flex items-center gap-2">
           {/* Undo/Redo Buttons */}
@@ -862,6 +1055,51 @@ ${cellsJsx}
             </button>
           </div>
 
+          {/* Group/Ungroup Buttons */}
+          {(selectedCellIds.size > 1 || selectedGroup) && (
+            <div className="flex items-center gap-1 px-1 py-1 rounded-lg bg-white/5 border border-white/10">
+              {selectedCellIds.size > 1 && !selectedGroup && (
+                <button
+                  onClick={groupSelectedCells}
+                  title="Group Selected (Ctrl+G)"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-colors text-xs"
+                >
+                  <Group className="w-3.5 h-3.5" />
+                  Group
+                </button>
+              )}
+              {selectedGroup && (
+                <button
+                  onClick={() => ungroupCells(selectedGroup)}
+                  title="Ungroup (Ctrl+Shift+G)"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-white/70 hover:bg-white/10 hover:text-white transition-colors text-xs"
+                >
+                  <Ungroup className="w-3.5 h-3.5" />
+                  Ungroup
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Multi-select indicator */}
+          {selectedCellIds.size > 0 && (
+            <span className="text-xs text-white/50 px-2">
+              {selectedCellIds.size} selected
+            </span>
+          )}
+
+          <button
+            onClick={() => setShowTemplatesGallery(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500/20 to-purple-500/20 hover:from-violet-500/30 hover:to-purple-500/30 border border-violet-500/30 text-sm text-violet-400 transition-colors"
+          >
+            <LayoutTemplate className="w-4 h-4" /> Templates
+          </button>
+          <button
+            onClick={() => setShowPreview(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-500/30 text-sm text-emerald-400 transition-colors"
+          >
+            <Eye className="w-4 h-4" /> Preview
+          </button>
           <button
             onClick={() => setShowExportModal(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/30 text-sm text-cyan-400 transition-colors"
@@ -876,6 +1114,50 @@ ${cellsJsx}
           </button>
         </div>
       </div>
+
+      {/* Templates Gallery Modal */}
+      <TemplatesGallery
+        isOpen={showTemplatesGallery}
+        onClose={() => setShowTemplatesGallery(false)}
+        onSelectTemplate={applyLayout}
+      />
+
+      {/* Preview Mode */}
+      <PreviewMode isOpen={showPreview} onClose={() => setShowPreview(false)}>
+        <div
+          className="w-full h-full p-4"
+          style={{
+            background: gradientSettings.enabled
+              ? `linear-gradient(${gradientSettings.direction}deg, ${gradientSettings.startColor}, ${gradientSettings.endColor})`
+              : inputColor,
+          }}
+        >
+          <div
+            className="grid h-full gap-4"
+            style={{
+              gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
+              gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
+              gap: `${layout.gap}px`,
+            }}
+          >
+            {layout.cells
+              .filter(
+                (cell) => cell.componentId && cell.componentId !== "empty",
+              )
+              .map((cell) => (
+                <div
+                  key={cell.id}
+                  style={{
+                    gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
+                    gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
+                  }}
+                >
+                  {renderComponent(cell)}
+                </div>
+              ))}
+          </div>
+        </div>
+      </PreviewMode>
 
       {/* Export Modal */}
       {showExportModal && (
@@ -1051,133 +1333,171 @@ ${cellsJsx}
                   gap: `${layout.gap}px`,
                 }}
               >
-                {layout.cells.map((cell) => (
-                  <div
-                    key={cell.id}
-                    onClick={() => selectCell(cell.id)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.add("ring-2", "ring-cyan-400");
-                    }}
-                    onDragLeave={(e) => {
-                      e.currentTarget.classList.remove(
-                        "ring-2",
-                        "ring-cyan-400",
-                      );
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.remove(
-                        "ring-2",
-                        "ring-cyan-400",
-                      );
-                      const templateId = e.dataTransfer.getData(
-                        "templateId",
-                      ) as ComponentTemplateId;
-                      if (templateId) {
-                        handleDrop(cell.id, templateId);
-                      }
-                    }}
-                    className={cn(
-                      "relative rounded-xl overflow-hidden transition-all cursor-pointer group",
-                      selectedCellId === cell.id
-                        ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent"
-                        : "hover:ring-1 hover:ring-white/30",
-                      !cell.componentId &&
-                        "bg-white/5 border-2 border-dashed border-white/20",
-                      isResizing &&
-                        resizingCellId === cell.id &&
-                        "ring-2 ring-yellow-400",
-                    )}
-                    style={{
-                      gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
-                      gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
-                    }}
-                  >
-                    {/* Cell Content */}
-                    <div className="w-full h-full">{renderComponent(cell)}</div>
+                {layout.cells.map((cell) => {
+                  const isSelected =
+                    selectedCellIds.has(cell.id) || selectedCellId === cell.id;
+                  const isInGroup = !!cell.groupId;
+                  const groupColor = isInGroup
+                    ? `hsl(${((cell.groupId?.charCodeAt(6) || 0) * 30) % 360}, 70%, 50%)`
+                    : undefined;
 
-                    {/* Resize Handles - show on selected cell */}
-                    {selectedCellId === cell.id && (
-                      <>
-                        {/* Right edge - resize column */}
+                  return (
+                    <div
+                      key={cell.id}
+                      onClick={(e) => handleCellClick(cell.id, e)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add(
+                          "ring-2",
+                          "ring-cyan-400",
+                        );
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.classList.remove(
+                          "ring-2",
+                          "ring-cyan-400",
+                        );
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove(
+                          "ring-2",
+                          "ring-cyan-400",
+                        );
+                        const templateId = e.dataTransfer.getData(
+                          "templateId",
+                        ) as ComponentTemplateId;
+                        if (templateId) {
+                          handleDrop(cell.id, templateId);
+                        }
+                      }}
+                      className={cn(
+                        "relative rounded-xl overflow-hidden transition-all cursor-pointer group",
+                        isSelected
+                          ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent"
+                          : "hover:ring-1 hover:ring-white/30",
+                        selectedCellIds.has(cell.id) && selectedCellIds.size > 1
+                          ? "ring-2 ring-blue-400 ring-offset-1"
+                          : "",
+                        !cell.componentId &&
+                          "bg-white/5 border-2 border-dashed border-white/20",
+                        isResizing &&
+                          resizingCellId === cell.id &&
+                          "ring-2 ring-yellow-400",
+                      )}
+                      style={{
+                        gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
+                        gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
+                        boxShadow: isInGroup
+                          ? `inset 0 0 0 3px ${groupColor}40`
+                          : undefined,
+                      }}
+                    >
+                      {/* Group indicator badge */}
+                      {isInGroup && (
                         <div
-                          onMouseDown={(e) =>
-                            handleResizeStart(e, cell.id, "col")
-                          }
-                          className="absolute top-0 right-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          title="Drag to resize width"
+                          className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded text-[10px] font-medium text-white/90"
+                          style={{ backgroundColor: groupColor }}
                         >
-                          <div className="w-1 h-8 bg-cyan-400 rounded-full" />
+                          Grouped
                         </div>
-                        {/* Bottom edge - resize row */}
-                        <div
-                          onMouseDown={(e) =>
-                            handleResizeStart(e, cell.id, "row")
-                          }
-                          className="absolute bottom-0 left-0 w-full h-3 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          title="Drag to resize height"
-                        >
-                          <div className="w-8 h-1 bg-cyan-400 rounded-full" />
-                        </div>
-                        {/* Corner - resize both */}
-                        <div
-                          onMouseDown={(e) =>
-                            handleResizeStart(e, cell.id, "both")
-                          }
-                          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          title="Drag to resize"
-                        >
-                          <div className="w-2 h-2 bg-cyan-400 rounded-sm rotate-45" />
-                        </div>
-                      </>
-                    )}
+                      )}
 
-                    {/* Cell Controls */}
-                    {selectedCellId === cell.id && cell.componentId && (
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowTemplates(false); // Switch to edit panel
-                          }}
-                          title="Edit Card"
-                          className="p-1.5 rounded-md bg-cyan-500/80 text-white hover:bg-cyan-500 transition-colors"
-                        >
-                          <Settings2 className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            clearCell(cell.id);
-                          }}
-                          title="Remove Card"
-                          className="p-1.5 rounded-md bg-red-500/80 text-white hover:bg-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                      {/* Multi-select checkbox indicator */}
+                      {selectedCellIds.has(cell.id) &&
+                        selectedCellIds.size > 1 && (
+                          <div className="absolute top-1 right-1 z-10 w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+
+                      {/* Cell Content */}
+                      <div className="w-full h-full">
+                        {renderComponent(cell)}
                       </div>
-                    )}
 
-                    {/* Cell indicator when empty */}
-                    {!cell.componentId && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="text-center">
-                          <Plus className="w-6 h-6 mx-auto mb-1 text-white/20" />
-                          <span className="text-xs text-white/30">
-                            Drop here
-                          </span>
+                      {/* Resize Handles - show on selected cell */}
+                      {selectedCellId === cell.id && (
+                        <>
+                          {/* Right edge - resize column */}
+                          <div
+                            onMouseDown={(e) =>
+                              handleResizeStart(e, cell.id, "col")
+                            }
+                            className="absolute top-0 right-0 w-3 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                            title="Drag to resize width"
+                          >
+                            <div className="w-1 h-8 bg-cyan-400 rounded-full" />
+                          </div>
+                          {/* Bottom edge - resize row */}
+                          <div
+                            onMouseDown={(e) =>
+                              handleResizeStart(e, cell.id, "row")
+                            }
+                            className="absolute bottom-0 left-0 w-full h-3 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                            title="Drag to resize height"
+                          >
+                            <div className="w-8 h-1 bg-cyan-400 rounded-full" />
+                          </div>
+                          {/* Corner - resize both */}
+                          <div
+                            onMouseDown={(e) =>
+                              handleResizeStart(e, cell.id, "both")
+                            }
+                            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                            title="Drag to resize"
+                          >
+                            <div className="w-2 h-2 bg-cyan-400 rounded-sm rotate-45" />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Cell Controls */}
+                      {selectedCellId === cell.id && cell.componentId && (
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowTemplates(false); // Switch to edit panel
+                            }}
+                            title="Edit Card"
+                            className="p-1.5 rounded-md bg-cyan-500/80 text-white hover:bg-cyan-500 transition-colors"
+                          >
+                            <Settings2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearCell(cell.id);
+                            }}
+                            title="Remove Card"
+                            className="p-1.5 rounded-md bg-red-500/80 text-white hover:bg-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+
+                      {/* Cell indicator when empty */}
+                      {!cell.componentId && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="text-center">
+                            <Plus className="w-6 h-6 mx-auto mb-1 text-white/20" />
+                            <span className="text-xs text-white/30">
+                              Drop here
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar - Template Palette OR Editor */}
+        {/* Right Sidebar - Template Palette OR Editor OR Props */}
         <div className="w-full lg:w-80 space-y-4">
           {/* Tab Switcher */}
           <div className="flex gap-1 p-1 rounded-lg bg-white/5 border border-white/10">
@@ -1204,7 +1524,7 @@ ${cellsJsx}
               )}
             >
               <Sliders className="w-4 h-4" />
-              Edit
+              {selectedCell?.componentId ? "Props" : "Edit"}
               {selectedCell?.componentId && (
                 <span className="w-2 h-2 rounded-full bg-cyan-400" />
               )}
@@ -1271,24 +1591,34 @@ ${cellsJsx}
                 Drag templates into grid cells
               </p>
             </div>
+          ) : selectedCell?.componentId ? (
+            // Props Editor Panel - when a cell with component is selected
+            <div className="rounded-xl bg-white/5 border border-white/10 sticky top-4 overflow-hidden max-h-[600px]">
+              <PropsEditor
+                cell={selectedCell}
+                onUpdate={(cellId, content) => {
+                  updateCell(cellId, { content });
+                }}
+                onClose={() => setShowTemplates(true)}
+              />
+            </div>
           ) : (
-            // Editor Panel
+            // Empty state - no cell selected
             <div className="p-4 rounded-xl bg-white/5 border border-white/10 sticky top-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-medium text-white flex items-center gap-2">
                   <Settings2 className="w-4 h-4" />
                   Edit Card
                 </h3>
-                {selectedCell?.componentId && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400">
-                    {cardTypes.find((t) => t.id === selectedCell.componentId)
-                      ?.name || "Unknown"}
-                  </span>
-                )}
               </div>
 
-              <div className="max-h-[500px] overflow-y-auto">
-                {renderContentEditor()}
+              <div className="text-center py-8">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/5 flex items-center justify-center">
+                  <Sliders className="w-6 h-6 text-white/30" />
+                </div>
+                <p className="text-white/50 text-sm">
+                  Select a cell with a component<br />to edit its properties
+                </p>
               </div>
             </div>
           )}

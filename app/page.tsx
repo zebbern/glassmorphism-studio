@@ -817,13 +817,13 @@ export default function GlassmorphismUtility() {
                                 onClick={() =>
                                   setBackgroundSettings((prev) => ({
                                     ...prev,
-                                    imageUrl: "/tech-background.png",
+                                    imageUrl: "/background.png",
                                   }))
                                 }
                                 size="sm"
                                 className={`${
                                   backgroundSettings.imageUrl ===
-                                  "/tech-background.png"
+                                  "/background.png"
                                     ? "bg-blue-500/30 text-blue-300 border-blue-500/50"
                                     : "bg-white/10 text-white/70 border-white/20"
                                 } hover:bg-blue-500/40 border backdrop-blur-sm text-xs`}
