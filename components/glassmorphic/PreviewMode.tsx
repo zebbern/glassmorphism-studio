@@ -80,9 +80,9 @@ interface PreviewModeProps {
   contentHeight?: number;
 }
 
-export function PreviewMode({ 
-  isOpen, 
-  onClose, 
+export function PreviewMode({
+  isOpen,
+  onClose,
   children,
   contentWidth = 1200,
   contentHeight,
@@ -246,19 +246,17 @@ export function PreviewMode({
                 }}
               >
                 {/* Scaled content container */}
-                <div 
+                <div
                   className="origin-top-left"
                   style={{
                     width: contentWidth,
-                    height: contentHeight || 'auto',
+                    height: contentHeight || "auto",
                     minHeight: frameHeight / scale,
                     transform: `scale(${scale})`,
-                    transformOrigin: 'top left',
+                    transformOrigin: "top left",
                   }}
                 >
-                  <div className="w-full h-full overflow-auto">
-                    {children}
-                  </div>
+                  <div className="w-full h-full overflow-auto">{children}</div>
                 </div>
               </div>
             </div>

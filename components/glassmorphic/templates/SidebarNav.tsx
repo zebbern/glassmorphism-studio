@@ -11,18 +11,41 @@ import {
   Bell,
   ChevronDown,
   Search,
+  LayoutDashboard,
+  FileText,
+  ShoppingCart,
+  Heart,
+  Star,
+  Zap,
+  Globe,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Clock,
+  Image,
+  Video,
+  Music,
+  Bookmark,
+  Tag,
+  Filter,
+  Grid,
+  List,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
-  icon:
+  icon?:
     | "home"
     | "chart"
     | "settings"
     | "users"
     | "messages"
     | "folder"
-    | "bell";
+    | "bell"
+    | "layout";
+  iconType?: string;
   label: string;
   active?: boolean;
   badge?: string;
@@ -34,6 +57,11 @@ export interface SidebarNavContent {
   collapsed?: boolean;
   showSearch?: boolean;
   title?: string;
+  user?: {
+    name: string;
+    role: string;
+    avatar?: string;
+  };
 }
 
 interface SidebarNavProps {
@@ -42,7 +70,7 @@ interface SidebarNavProps {
   className?: string;
 }
 
-const icons = {
+const icons: Record<string, React.ComponentType<{ className?: string }>> = {
   home: Home,
   chart: BarChart2,
   settings: Settings,
@@ -50,6 +78,27 @@ const icons = {
   messages: MessageSquare,
   folder: FolderOpen,
   bell: Bell,
+  layout: LayoutDashboard,
+  "file-text": FileText,
+  cart: ShoppingCart,
+  heart: Heart,
+  star: Star,
+  zap: Zap,
+  globe: Globe,
+  mail: Mail,
+  phone: Phone,
+  "map-pin": MapPin,
+  calendar: Calendar,
+  clock: Clock,
+  image: Image,
+  video: Video,
+  music: Music,
+  bookmark: Bookmark,
+  tag: Tag,
+  filter: Filter,
+  grid: Grid,
+  list: List,
+  more: MoreHorizontal,
 };
 
 const defaultContent: SidebarNavContent = {
@@ -82,6 +131,12 @@ export function SidebarNav({
     );
   };
 
+  // Get icon from either icon or iconType
+  const getIcon = (item: NavItem) => {
+    const iconKey = item.iconType || item.icon || "home";
+    return icons[iconKey] || Home;
+  };
+
   return (
     <div
       className={cn(
@@ -111,8 +166,8 @@ export function SidebarNav({
 
       {/* Navigation Items */}
       <nav className="flex-1 space-y-1">
-        {content.items.map((item, index) => {
-          const IconComponent = icons[item.icon];
+        {(content.items || []).map((item, index) => {
+          const IconComponent = getIcon(item);
           const isExpanded = expandedItems.includes(item.label);
           const hasChildren = item.children && item.children.length > 0;
 
@@ -163,6 +218,33 @@ export function SidebarNav({
           );
         })}
       </nav>
+
+      {/* User Section */}
+      {content.user && (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 flex items-center justify-center text-white font-medium">
+              {content.user.avatar ? (
+                <img
+                  src={content.user.avatar}
+                  alt={content.user.name}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                content.user.name.charAt(0).toUpperCase()
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">
+                {content.user.name}
+              </p>
+              <p className="text-xs text-white/50 truncate">
+                {content.user.role}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

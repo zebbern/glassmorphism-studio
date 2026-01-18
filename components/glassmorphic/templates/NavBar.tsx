@@ -1,15 +1,32 @@
 "use client";
 
 import React from "react";
-import { Menu, X, ChevronDown, Search, Bell, User } from "lucide-react";
+import {
+  Menu,
+  X,
+  ChevronDown,
+  Search,
+  Bell,
+  User,
+  ShoppingCart,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export interface NavLink {
+  label: string;
+  href?: string;
+  active?: boolean;
+}
 
 export interface NavBarContent {
   logo: string;
-  showSearch: boolean;
-  showNotifications: boolean;
-  showProfile: boolean;
-  menuItems: string[];
+  showSearch?: boolean;
+  showNotifications?: boolean;
+  showProfile?: boolean;
+  showCart?: boolean;
+  cartCount?: number;
+  menuItems?: string[];
+  links?: NavLink[];
 }
 
 interface NavBarProps {
@@ -33,6 +50,20 @@ export function NavBar({
 }: NavBarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
+  // Handle both menuItems (string[]) and links (NavLink[]) formats
+  const navItems: NavLink[] = React.useMemo(() => {
+    if (content.links && content.links.length > 0) {
+      return content.links;
+    }
+    if (content.menuItems && content.menuItems.length > 0) {
+      return content.menuItems.map((item) => ({ label: item, href: "#" }));
+    }
+    return (
+      defaultContent.menuItems?.map((item) => ({ label: item, href: "#" })) ||
+      []
+    );
+  }, [content.links, content.menuItems]);
+
   return (
     <nav
       className={cn("w-full p-4 rounded-2xl overflow-hidden", className)}
@@ -47,13 +78,18 @@ export function NavBar({
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6">
-            {content.menuItems.map((item) => (
+            {navItems.map((item) => (
               <a
-                key={item}
-                href="#"
-                className="text-sm text-white/70 hover:text-white transition-colors"
+                key={item.label}
+                href={item.href || "#"}
+                className={cn(
+                  "text-sm transition-colors",
+                  item.active
+                    ? "text-white font-medium"
+                    : "text-white/70 hover:text-white",
+                )}
               >
-                {item}
+                {item.label}
               </a>
             ))}
           </div>
@@ -71,6 +107,18 @@ export function NavBar({
                 className="bg-transparent text-sm text-white placeholder-white/50 outline-none w-32"
               />
             </div>
+          )}
+
+          {/* Cart */}
+          {content.showCart && (
+            <button className="relative p-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/70 hover:text-white transition-colors">
+              <ShoppingCart className="w-5 h-5" />
+              {content.cartCount && content.cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-cyan-500 text-white text-xs flex items-center justify-center font-medium">
+                  {content.cartCount}
+                </span>
+              )}
+            </button>
           )}
 
           {/* Notifications */}
@@ -105,13 +153,18 @@ export function NavBar({
       {isOpen && (
         <div className="md:hidden mt-4 pt-4 border-t border-white/10">
           <div className="flex flex-col gap-3">
-            {content.menuItems.map((item) => (
+            {navItems.map((item) => (
               <a
-                key={item}
-                href="#"
-                className="text-sm text-white/70 hover:text-white py-2 transition-colors"
+                key={item.label}
+                href={item.href || "#"}
+                className={cn(
+                  "text-sm py-2 transition-colors",
+                  item.active
+                    ? "text-white font-medium"
+                    : "text-white/70 hover:text-white",
+                )}
               >
-                {item}
+                {item.label}
               </a>
             ))}
           </div>

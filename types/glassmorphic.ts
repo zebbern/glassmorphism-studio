@@ -322,6 +322,6 @@ export interface TemplateInfo {
   name: string;
   description: string;
   icon: string;
-  category: "cards" | "forms" | "widgets" | "navigation" | "media";
+  category: "cards" | "forms" | "widgets" | "navigation" | "media" | "layout";
   defaultContent: Record<string, unknown>;
 }

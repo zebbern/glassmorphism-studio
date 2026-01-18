@@ -10,11 +10,19 @@ import {
   Globe,
   Lock,
   Heart,
+  Smartphone,
+  Palette,
+  FileText,
+  Lightbulb,
+  PenTool,
+  Code,
+  Cpu,
+  Grid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FeatureCardContent {
-  icon:
+  icon?:
     | "zap"
     | "shield"
     | "rocket"
@@ -24,6 +32,7 @@ export interface FeatureCardContent {
     | "globe"
     | "lock"
     | "heart";
+  iconType?: string;
   title: string;
   description: string;
   badge?: string;
@@ -37,7 +46,7 @@ interface FeatureCardProps {
   className?: string;
 }
 
-const icons = {
+const icons: Record<string, React.ComponentType<{ className?: string }>> = {
   zap: Zap,
   lightning: Zap,
   shield: Shield,
@@ -47,9 +56,17 @@ const icons = {
   globe: Globe,
   lock: Lock,
   heart: Heart,
+  smartphone: Smartphone,
+  palette: Palette,
+  "file-text": FileText,
+  lightbulb: Lightbulb,
+  "pen-tool": PenTool,
+  code: Code,
+  cpu: Cpu,
+  grid: Grid,
 };
 
-const iconColors = {
+const iconColors: Record<string, string> = {
   zap: "from-yellow-400 to-orange-500",
   lightning: "from-yellow-400 to-orange-500",
   shield: "from-blue-400 to-cyan-500",
@@ -59,6 +76,14 @@ const iconColors = {
   globe: "from-blue-400 to-indigo-500",
   lock: "from-slate-400 to-zinc-500",
   heart: "from-red-400 to-pink-500",
+  smartphone: "from-cyan-400 to-blue-500",
+  palette: "from-pink-400 to-purple-500",
+  "file-text": "from-slate-400 to-gray-500",
+  lightbulb: "from-yellow-400 to-amber-500",
+  "pen-tool": "from-violet-400 to-purple-500",
+  code: "from-emerald-400 to-green-500",
+  cpu: "from-blue-400 to-indigo-500",
+  grid: "from-cyan-400 to-teal-500",
 };
 
 const badgeColors = {
@@ -82,8 +107,10 @@ export function FeatureCard({
   glassStyle,
   className,
 }: FeatureCardProps) {
-  const IconComponent = icons[content.icon] || Zap;
-  const gradientColor = iconColors[content.icon] || iconColors.zap;
+  // Support both icon and iconType
+  const iconKey = content.iconType || content.icon || "zap";
+  const IconComponent = icons[iconKey] || Zap;
+  const gradientColor = iconColors[iconKey] || iconColors.zap;
 
   return (
     <div

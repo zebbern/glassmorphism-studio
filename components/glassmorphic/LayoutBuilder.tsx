@@ -1123,8 +1123,8 @@ ${cellsJsx}
       />
 
       {/* Preview Mode */}
-      <PreviewMode 
-        isOpen={showPreview} 
+      <PreviewMode
+        isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         contentWidth={1200}
       >
