@@ -133,7 +133,7 @@ export default function GlassmorphismUtility() {
   });
 
   const [backgroundSettings, setBackgroundSettings] = useState({
-    imageUrl: "/tech-background.png",
+    imageUrl: "/background.png",
     opacity: 1.0,
     blur: 0,
     customUrl: "",
@@ -870,8 +870,7 @@ export default function GlassmorphismUtility() {
                                     setBackgroundSettings((prev) => ({
                                       ...prev,
                                       imageUrl:
-                                        prev.customUrl ||
-                                        "/tech-background.png",
+                                        prev.customUrl || "/background.png",
                                     }))
                                   }
                                   size="sm"

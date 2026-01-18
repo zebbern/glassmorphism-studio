@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import { X, Smartphone, Tablet, Monitor, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,9 +74,19 @@ interface PreviewModeProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  /** The actual design width of the content (default: 1200) */
+  contentWidth?: number;
+  /** The actual design height of the content (default: auto) */
+  contentHeight?: number;
 }
 
-export function PreviewMode({ isOpen, onClose, children }: PreviewModeProps) {
+export function PreviewMode({ 
+  isOpen, 
+  onClose, 
+  children,
+  contentWidth = 1200,
+  contentHeight,
+}: PreviewModeProps) {
   const [selectedDevice, setSelectedDevice] = React.useState<DeviceFrame>(
     deviceFrames.find((d) => d.id === "desktop") || deviceFrames[4],
   );
@@ -109,6 +119,9 @@ export function PreviewMode({ isOpen, onClose, children }: PreviewModeProps) {
   const frameWidth = isRotated ? selectedDevice.height : selectedDevice.width;
   const frameHeight = isRotated ? selectedDevice.width : selectedDevice.height;
 
+  // Calculate the scale needed to fit content into the device frame
+  const scale = isFullScreen ? 1 : frameWidth / contentWidth;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
       {/* Toolbar */}
@@ -118,6 +131,11 @@ export function PreviewMode({ isOpen, onClose, children }: PreviewModeProps) {
             Preview Mode
           </span>
           <span className="text-white/50 text-xs">Press ESC to exit</span>
+          {!isFullScreen && (
+            <span className="text-cyan-400/70 text-xs">
+              Scale: {Math.round(scale * 100)}%
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -221,13 +239,27 @@ export function PreviewMode({ isOpen, onClose, children }: PreviewModeProps) {
 
               {/* Screen */}
               <div
-                className="w-full h-full bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-[2rem] overflow-hidden"
+                className="bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-[2rem] overflow-hidden"
                 style={{
                   width: frameWidth,
                   height: frameHeight,
                 }}
               >
-                <div className="w-full h-full overflow-auto">{children}</div>
+                {/* Scaled content container */}
+                <div 
+                  className="origin-top-left"
+                  style={{
+                    width: contentWidth,
+                    height: contentHeight || 'auto',
+                    minHeight: frameHeight / scale,
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'top left',
+                  }}
+                >
+                  <div className="w-full h-full overflow-auto">
+                    {children}
+                  </div>
+                </div>
               </div>
             </div>
 

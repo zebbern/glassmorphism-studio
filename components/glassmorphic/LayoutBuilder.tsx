@@ -1123,9 +1123,13 @@ ${cellsJsx}
       />
 
       {/* Preview Mode */}
-      <PreviewMode isOpen={showPreview} onClose={() => setShowPreview(false)}>
+      <PreviewMode 
+        isOpen={showPreview} 
+        onClose={() => setShowPreview(false)}
+        contentWidth={1200}
+      >
         <div
-          className="w-full h-full p-4"
+          className="w-full min-h-full p-4"
           style={{
             background: gradientSettings.enabled
               ? `linear-gradient(${gradientSettings.direction}deg, ${gradientSettings.startColor}, ${gradientSettings.endColor})`
@@ -1133,9 +1137,9 @@ ${cellsJsx}
           }}
         >
           <div
-            className="grid h-full gap-4"
+            className="grid gap-4"
             style={{
-              gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
+              gridTemplateRows: `repeat(${layout.rows}, minmax(100px, auto))`,
               gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
               gap: `${layout.gap}px`,
             }}
@@ -1617,7 +1621,9 @@ ${cellsJsx}
                   <Sliders className="w-6 h-6 text-white/30" />
                 </div>
                 <p className="text-white/50 text-sm">
-                  Select a cell with a component<br />to edit its properties
+                  Select a cell with a component
+                  <br />
+                  to edit its properties
                 </p>
               </div>
             </div>

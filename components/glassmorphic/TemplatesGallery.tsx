@@ -54,15 +54,28 @@ export const pageTemplates: PageTemplate[] = [
     description: "Hero section with features, testimonials, and CTA",
     icon: <Sparkles className="w-5 h-5" />,
     category: "marketing",
-    preview: "🚀",
+    preview: "",
     layout: {
       id: "landing-page",
       name: "Landing Page",
-      rows: 4,
-      cols: 3,
+      rows: 5,
+      cols: 4,
       gap: 16,
       cells: [
-        createCell("hero", 0, 0, 1, 3, "hero-section", {
+        // Header/Navigation
+        createCell("header", 0, 0, 1, 4, "nav-bar", {
+          logo: "Glassmorphic",
+          links: [
+            { label: "Home", href: "#", active: true },
+            { label: "Features", href: "#" },
+            { label: "Pricing", href: "#" },
+            { label: "Contact", href: "#" },
+          ],
+          showSearch: false,
+          showNotifications: false,
+        }),
+        // Hero Section
+        createCell("hero", 1, 0, 1, 4, "hero-section", {
           title: "Build Beautiful Apps",
           subtitle:
             "Create stunning glassmorphic interfaces with our drag-and-drop builder",
@@ -71,22 +84,29 @@ export const pageTemplates: PageTemplate[] = [
           rating: 4.9,
           reviews: 2500,
         }),
-        createCell("feature-1", 1, 0, 1, 1, "feature", {
+        // Features Row
+        createCell("feature-1", 2, 0, 1, 1, "feature", {
           title: "Easy to Use",
           description: "Intuitive drag-and-drop interface",
-          icon: "⚡",
+          iconType: "zap",
         }),
-        createCell("feature-2", 1, 1, 1, 1, "feature", {
+        createCell("feature-2", 2, 1, 1, 1, "feature", {
           title: "Customizable",
           description: "Endless styling options",
-          icon: "🎨",
+          iconType: "palette",
         }),
-        createCell("feature-3", 1, 2, 1, 1, "feature", {
+        createCell("feature-3", 2, 2, 1, 1, "feature", {
           title: "Responsive",
           description: "Works on all devices",
-          icon: "📱",
+          iconType: "smartphone",
         }),
-        createCell("testimonial-1", 2, 0, 1, 2, "testimonial", {
+        createCell("feature-4", 2, 3, 1, 1, "feature", {
+          title: "Fast",
+          description: "Optimized performance",
+          iconType: "rocket",
+        }),
+        // Testimonial + Stats Row
+        createCell("testimonial-1", 3, 0, 1, 3, "testimonial", {
           quote:
             "This tool has completely transformed how we build interfaces!",
           author: "Jane Cooper",
@@ -94,14 +114,15 @@ export const pageTemplates: PageTemplate[] = [
           avatar: "https://i.pravatar.cc/150?img=1",
           rating: 5,
         }),
-        createCell("stats", 2, 2, 1, 1, "stats-widget", {
+        createCell("stats", 3, 3, 1, 1, "stats-widget", {
           title: "Active Users",
           value: "50K+",
           change: 12.5,
           trend: "up",
           period: "this month",
         }),
-        createCell("footer", 3, 0, 1, 3, "footer-section", {
+        // Footer
+        createCell("footer", 4, 0, 1, 4, "footer-section", {
           companyName: "Glassmorphic Studio",
           tagline: "Design beautiful interfaces",
           links: [
@@ -125,24 +146,26 @@ export const pageTemplates: PageTemplate[] = [
     description: "Admin dashboard with stats, charts, and data table",
     icon: <Layout className="w-5 h-5" />,
     category: "app",
-    preview: "📊",
+    preview: "",
     layout: {
       id: "dashboard",
       name: "Dashboard",
-      rows: 3,
-      cols: 4,
+      rows: 4,
+      cols: 5,
       gap: 16,
       cells: [
-        createCell("nav", 0, 0, 3, 1, "sidebar-nav", {
+        // Sidebar Navigation
+        createCell("nav", 0, 0, 4, 1, "sidebar-nav", {
           title: "Dashboard",
           items: [
-            { icon: "📊", label: "Overview", active: true },
-            { icon: "📈", label: "Analytics" },
-            { icon: "👥", label: "Users" },
-            { icon: "⚙️", label: "Settings" },
+            { iconType: "layout", label: "Overview", active: true },
+            { iconType: "chart", label: "Analytics" },
+            { iconType: "users", label: "Users" },
+            { iconType: "settings", label: "Settings" },
           ],
           user: { name: "Admin", role: "Administrator", avatar: "" },
         }),
+        // Top Stats Row
         createCell("stat-1", 0, 1, 1, 1, "stats-widget", {
           title: "Total Revenue",
           value: "$124,500",
@@ -164,7 +187,15 @@ export const pageTemplates: PageTemplate[] = [
           trend: "down",
           period: "vs last month",
         }),
-        createCell("chart", 1, 1, 1, 2, "chart-widget", {
+        createCell("stat-4", 0, 4, 1, 1, "stats-widget", {
+          title: "Orders",
+          value: "1,248",
+          change: 5.7,
+          trend: "up",
+          period: "vs last month",
+        }),
+        // Chart + Notifications
+        createCell("chart", 1, 1, 2, 3, "chart-widget", {
           title: "Revenue Overview",
           type: "line",
           data: [30, 45, 35, 50, 49, 60, 70, 91, 85],
@@ -181,13 +212,31 @@ export const pageTemplates: PageTemplate[] = [
           ],
           color: "#06b6d4",
         }),
-        createCell("notifications", 1, 3, 1, 1, "notification-toast", {
-          title: "New Order",
-          message: "You have a new order #1234",
-          type: "success",
-          time: "Just now",
+        createCell("notifications", 1, 4, 2, 1, "notification-toast", {
+          title: "Notifications",
+          items: [
+            {
+              title: "New Order",
+              message: "Order #1234 received",
+              type: "success",
+              time: "Just now",
+            },
+            {
+              title: "Payment",
+              message: "Payment processed",
+              type: "info",
+              time: "5m ago",
+            },
+            {
+              title: "Warning",
+              message: "Low inventory",
+              type: "warning",
+              time: "1h ago",
+            },
+          ],
         }),
-        createCell("table", 2, 1, 1, 3, "data-table", {
+        // Data Table
+        createCell("table", 3, 1, 1, 4, "data-table", {
           title: "Recent Orders",
           columns: ["Order ID", "Customer", "Amount", "Status"],
           rows: [
@@ -205,29 +254,43 @@ export const pageTemplates: PageTemplate[] = [
     description: "Personal portfolio with hero, gallery, and contact",
     icon: <Briefcase className="w-5 h-5" />,
     category: "portfolio",
-    preview: "💼",
+    preview: "",
     layout: {
       id: "portfolio",
       name: "Portfolio",
-      rows: 3,
-      cols: 3,
+      rows: 5,
+      cols: 4,
       gap: 16,
       cells: [
-        createCell("profile", 0, 0, 1, 1, "profile", {
+        // Navigation Header
+        createCell("header", 0, 0, 1, 4, "nav-bar", {
+          logo: "Alex.Design",
+          links: [
+            { label: "Home", href: "#", active: true },
+            { label: "Work", href: "#" },
+            { label: "About", href: "#" },
+            { label: "Contact", href: "#" },
+          ],
+          showSearch: false,
+          showNotifications: false,
+        }),
+        // Profile + Hero
+        createCell("profile", 1, 0, 1, 1, "profile", {
           name: "Alex Designer",
           role: "UI/UX Designer",
           avatar: "https://i.pravatar.cc/150?img=3",
           bio: "Creating beautiful digital experiences",
           stats: { projects: 45, clients: 32, awards: 8 },
         }),
-        createCell("hero", 0, 1, 1, 2, "hero-section", {
+        createCell("hero", 1, 1, 1, 3, "hero-section", {
           title: "Creative Designer",
           subtitle:
             "I craft beautiful digital experiences that inspire and engage",
           primaryCta: "View Work",
           secondaryCta: "Contact Me",
         }),
-        createCell("gallery", 1, 0, 1, 2, "image-gallery", {
+        // Gallery Row
+        createCell("gallery", 2, 0, 2, 3, "image-gallery", {
           title: "Recent Projects",
           images: [
             {
@@ -253,7 +316,7 @@ export const pageTemplates: PageTemplate[] = [
           ],
           layout: "grid",
         }),
-        createCell("testimonial", 1, 2, 1, 1, "testimonial", {
+        createCell("testimonial", 2, 3, 2, 1, "testimonial", {
           quote:
             "Alex delivered exceptional work that exceeded our expectations!",
           author: "Sarah Johnson",
@@ -261,7 +324,8 @@ export const pageTemplates: PageTemplate[] = [
           avatar: "https://i.pravatar.cc/150?img=5",
           rating: 5,
         }),
-        createCell("contact", 2, 0, 1, 2, "contact-form", {
+        // Contact + Footer
+        createCell("contact", 4, 0, 1, 3, "contact-form", {
           title: "Get in Touch",
           fields: ["name", "email", "message"],
           submitText: "Send Message",
@@ -271,7 +335,7 @@ export const pageTemplates: PageTemplate[] = [
             location: "San Francisco, CA",
           },
         }),
-        createCell("footer", 2, 2, 1, 1, "footer-section", {
+        createCell("footer", 4, 3, 1, 1, "footer-section", {
           companyName: "Alex Designer",
           tagline: "Let's create something amazing",
           socialLinks: [
@@ -289,14 +353,15 @@ export const pageTemplates: PageTemplate[] = [
     description: "Blog page with featured posts and sidebar",
     icon: <FileText className="w-5 h-5" />,
     category: "content",
-    preview: "📝",
+    preview: "",
     layout: {
       id: "blog",
       name: "Blog Layout",
-      rows: 3,
+      rows: 5,
       cols: 4,
       gap: 16,
       cells: [
+        // Navigation Header
         createCell("nav", 0, 0, 1, 4, "nav-bar", {
           logo: "BlogName",
           links: [
@@ -306,8 +371,9 @@ export const pageTemplates: PageTemplate[] = [
             { label: "About", href: "#" },
           ],
           showSearch: true,
-          showNotifications: true,
+          showNotifications: false,
         }),
+        // Featured Post
         createCell("featured", 1, 0, 1, 3, "hero-section", {
           title: "Featured Article Title",
           subtitle:
@@ -315,32 +381,66 @@ export const pageTemplates: PageTemplate[] = [
           primaryCta: "Read More",
           tag: "Featured",
         }),
-        createCell("sidebar-profile", 1, 3, 1, 1, "profile", {
+        // Sidebar Profile
+        createCell("sidebar-profile", 1, 3, 2, 1, "profile", {
           name: "Author Name",
           role: "Tech Writer",
           avatar: "https://i.pravatar.cc/150?img=7",
           bio: "Writing about technology and design",
           stats: { posts: 120, followers: "5K", years: 5 },
         }),
+        // Recent Posts Grid
         createCell("post-1", 2, 0, 1, 1, "feature", {
           title: "Article Title 1",
           description: "Brief description of the article content",
-          icon: "📱",
+          iconType: "file-text",
         }),
         createCell("post-2", 2, 1, 1, 1, "feature", {
           title: "Article Title 2",
           description: "Brief description of the article content",
-          icon: "💡",
+          iconType: "lightbulb",
         }),
         createCell("post-3", 2, 2, 1, 1, "feature", {
           title: "Article Title 3",
           description: "Brief description of the article content",
-          icon: "🎨",
+          iconType: "pen-tool",
         }),
-        createCell("newsletter", 2, 3, 1, 1, "contact-form", {
+        // More Posts + Newsletter
+        createCell("post-4", 3, 0, 1, 1, "feature", {
+          title: "Article Title 4",
+          description: "Brief description of the article content",
+          iconType: "code",
+        }),
+        createCell("post-5", 3, 1, 1, 1, "feature", {
+          title: "Article Title 5",
+          description: "Brief description of the article content",
+          iconType: "cpu",
+        }),
+        createCell("post-6", 3, 2, 1, 1, "feature", {
+          title: "Article Title 6",
+          description: "Brief description of the article content",
+          iconType: "globe",
+        }),
+        createCell("newsletter", 3, 3, 1, 1, "contact-form", {
           title: "Newsletter",
           fields: ["email"],
           submitText: "Subscribe",
+        }),
+        // Footer
+        createCell("footer", 4, 0, 1, 4, "footer-section", {
+          companyName: "BlogName",
+          tagline: "Insights and stories",
+          links: [
+            { label: "Home", href: "#" },
+            { label: "Articles", href: "#" },
+            { label: "About", href: "#" },
+            { label: "Contact", href: "#" },
+          ],
+          socialLinks: [
+            { platform: "twitter", href: "#" },
+            { platform: "github", href: "#" },
+            { platform: "linkedin", href: "#" },
+          ],
         }),
       ],
     },
@@ -351,14 +451,15 @@ export const pageTemplates: PageTemplate[] = [
     description: "Product showcase with cart and filters",
     icon: <Store className="w-5 h-5" />,
     category: "app",
-    preview: "🛒",
+    preview: "",
     layout: {
       id: "ecommerce",
       name: "E-commerce",
-      rows: 3,
+      rows: 5,
       cols: 4,
       gap: 16,
       cells: [
+        // Navigation Header
         createCell("nav", 0, 0, 1, 4, "nav-bar", {
           logo: "ShopName",
           links: [
@@ -371,12 +472,14 @@ export const pageTemplates: PageTemplate[] = [
           showCart: true,
           cartCount: 3,
         }),
+        // Hero Banner
         createCell("hero", 1, 0, 1, 2, "hero-section", {
           title: "Summer Collection",
           subtitle: "Discover our latest arrivals with up to 50% off",
           primaryCta: "Shop Now",
           secondaryCta: "View All",
         }),
+        // Featured Products
         createCell("product-1", 1, 2, 1, 1, "pricing", {
           title: "Premium Headphones",
           price: "$299",
@@ -390,7 +493,8 @@ export const pageTemplates: PageTemplate[] = [
           features: ["Health Tracking", "GPS", "5 Day Battery"],
           badge: "New",
         }),
-        createCell("gallery", 2, 0, 1, 3, "image-gallery", {
+        // Product Gallery
+        createCell("gallery", 2, 0, 2, 3, "image-gallery", {
           title: "Trending Products",
           images: [
             {
@@ -426,11 +530,33 @@ export const pageTemplates: PageTemplate[] = [
           ],
           layout: "grid",
         }),
+        // Promo + Categories
         createCell("promo", 2, 3, 1, 1, "stats-widget", {
           title: "Flash Sale",
           value: "50% OFF",
           description: "Ends in 24 hours",
           trend: "up",
+        }),
+        createCell("categories", 3, 3, 1, 1, "feature", {
+          title: "Categories",
+          description: "Browse all products",
+          iconType: "grid",
+        }),
+        // Footer
+        createCell("footer", 4, 0, 1, 4, "footer-section", {
+          companyName: "ShopName",
+          tagline: "Quality products, great prices",
+          links: [
+            { label: "Home", href: "#" },
+            { label: "Products", href: "#" },
+            { label: "About", href: "#" },
+            { label: "Contact", href: "#" },
+          ],
+          socialLinks: [
+            { platform: "twitter", href: "#" },
+            { platform: "instagram", href: "#" },
+            { platform: "facebook", href: "#" },
+          ],
         }),
       ],
     },
@@ -441,20 +567,34 @@ export const pageTemplates: PageTemplate[] = [
     description: "Pricing page with plans and FAQ",
     icon: <CreditCard className="w-5 h-5" />,
     category: "marketing",
-    preview: "💳",
+    preview: "",
     layout: {
       id: "saas-pricing",
       name: "SaaS Pricing",
-      rows: 3,
+      rows: 5,
       cols: 3,
       gap: 16,
       cells: [
-        createCell("hero", 0, 0, 1, 3, "hero-section", {
+        // Navigation Header
+        createCell("nav", 0, 0, 1, 3, "nav-bar", {
+          logo: "SaaSName",
+          links: [
+            { label: "Features", href: "#" },
+            { label: "Pricing", href: "#", active: true },
+            { label: "Docs", href: "#" },
+            { label: "Contact", href: "#" },
+          ],
+          showSearch: false,
+          showNotifications: false,
+        }),
+        // Hero
+        createCell("hero", 1, 0, 1, 3, "hero-section", {
           title: "Simple, Transparent Pricing",
           subtitle:
             "Choose the plan that's right for you. All plans include a 14-day free trial.",
         }),
-        createCell("basic", 1, 0, 1, 1, "pricing", {
+        // Pricing Cards
+        createCell("basic", 2, 0, 1, 1, "pricing", {
           title: "Starter",
           price: "$9",
           period: "/month",
@@ -468,7 +608,7 @@ export const pageTemplates: PageTemplate[] = [
           cta: "Start Free Trial",
           highlighted: false,
         }),
-        createCell("pro", 1, 1, 1, 1, "pricing", {
+        createCell("pro", 2, 1, 1, 1, "pricing", {
           title: "Professional",
           price: "$29",
           period: "/month",
@@ -484,7 +624,7 @@ export const pageTemplates: PageTemplate[] = [
           highlighted: true,
           badge: "Most Popular",
         }),
-        createCell("enterprise", 1, 2, 1, 1, "pricing", {
+        createCell("enterprise", 2, 2, 1, 1, "pricing", {
           title: "Enterprise",
           price: "$99",
           period: "/month",
@@ -499,7 +639,8 @@ export const pageTemplates: PageTemplate[] = [
           cta: "Contact Sales",
           highlighted: false,
         }),
-        createCell("testimonial", 2, 0, 1, 2, "testimonial", {
+        // Testimonial + Trust
+        createCell("testimonial", 3, 0, 1, 2, "testimonial", {
           quote:
             "Switching to this platform increased our productivity by 40%. The ROI was immediate.",
           author: "Michael Chen",
@@ -507,12 +648,28 @@ export const pageTemplates: PageTemplate[] = [
           avatar: "https://i.pravatar.cc/150?img=11",
           rating: 5,
         }),
-        createCell("stats", 2, 2, 1, 1, "stats-widget", {
+        createCell("stats", 3, 2, 1, 1, "stats-widget", {
           title: "Trusted By",
           value: "10,000+",
           description: "Companies worldwide",
           trend: "up",
           change: 25,
+        }),
+        // Footer
+        createCell("footer", 4, 0, 1, 3, "footer-section", {
+          companyName: "SaaSName",
+          tagline: "Empowering teams everywhere",
+          links: [
+            { label: "Features", href: "#" },
+            { label: "Pricing", href: "#" },
+            { label: "Docs", href: "#" },
+            { label: "Contact", href: "#" },
+          ],
+          socialLinks: [
+            { platform: "twitter", href: "#" },
+            { platform: "github", href: "#" },
+            { platform: "linkedin", href: "#" },
+          ],
         }),
       ],
     },
@@ -610,7 +767,7 @@ export function TemplatesGallery({
                 <div className="aspect-video rounded-lg bg-gradient-to-br from-purple-600/30 via-pink-500/30 to-orange-400/30 mb-4 flex items-center justify-center relative overflow-hidden">
                   {/* Mini grid preview */}
                   <div
-                    className="absolute inset-2 grid gap-1 opacity-60"
+                    className="absolute inset-2 grid gap-1"
                     style={{
                       gridTemplateRows: `repeat(${template.layout.rows}, 1fr)`,
                       gridTemplateColumns: `repeat(${template.layout.cols}, 1fr)`,
@@ -619,7 +776,7 @@ export function TemplatesGallery({
                     {template.layout.cells.map((cell) => (
                       <div
                         key={cell.id}
-                        className="bg-white/20 rounded"
+                        className="bg-white/30 rounded border border-white/20"
                         style={{
                           gridRow: `${cell.row + 1} / span ${cell.rowSpan}`,
                           gridColumn: `${cell.col + 1} / span ${cell.colSpan}`,
@@ -627,7 +784,6 @@ export function TemplatesGallery({
                       />
                     ))}
                   </div>
-                  <span className="text-4xl z-10">{template.preview}</span>
                 </div>
 
                 {/* Info */}
