@@ -44,6 +44,12 @@ Based on the user's feedback and attached screenshot:
 - [ ] Task 13: Fix any bugs found
 - [ ] Task 14: Commit and push to GitHub
 
+## User Feedback Phase 2
+
+- [ ] Task 15: Increase height granularity (change grid row height to 60px, update presets)
+- [ ] Task 16: Implement auto-cleanup of empty rows
+- [ ] Task 17: Enhance "Add Box" to allow choosing size/template
+
 ## Files Being Modified
 
 - `components/glassmorphic/LayoutBuilder.tsx` - Main layout builder component

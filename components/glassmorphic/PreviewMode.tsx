@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 import { X, Smartphone, Tablet, Monitor, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,6 +91,8 @@ export function PreviewMode({
     deviceFrames.find((d) => d.id === "desktop") || deviceFrames[4],
   );
   const [isRotated, setIsRotated] = React.useState(false);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Handle escape key to close preview
   const handleKeyDown = useCallback(
@@ -113,6 +115,22 @@ export function PreviewMode({
     };
   }, [isOpen, handleKeyDown]);
 
+  // Track container size for responsive scaling
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return;
+
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const isFullScreen = selectedDevice.id === "full";
@@ -120,7 +138,19 @@ export function PreviewMode({
   const frameHeight = isRotated ? selectedDevice.width : selectedDevice.height;
 
   // Calculate the scale needed to fit content into the device frame
-  const scale = isFullScreen ? 1 : frameWidth / contentWidth;
+  const contentScale = isFullScreen ? 1 : frameWidth / contentWidth;
+
+  // Calculate viewport scale to fit device frame within available space (with padding)
+  const availableWidth = containerSize.width - 64; // 32px padding on each side
+  const availableHeight = containerSize.height - 96; // Extra space for label below
+  const deviceTotalWidth = frameWidth + 24; // frame + padding
+  const deviceTotalHeight = frameHeight + 24; // frame + padding
+
+  const viewportScale = Math.min(
+    1,
+    availableWidth / deviceTotalWidth,
+    availableHeight / deviceTotalHeight,
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
@@ -131,9 +161,9 @@ export function PreviewMode({
             Preview Mode
           </span>
           <span className="text-white/50 text-xs">Press ESC to exit</span>
-          {!isFullScreen && (
+          {!isFullScreen && viewportScale > 0 && (
             <span className="text-cyan-400/70 text-xs">
-              Scale: {Math.round(scale * 100)}%
+              Scale: {Math.round(viewportScale * 100)}%
             </span>
           )}
         </div>
@@ -219,11 +249,20 @@ export function PreviewMode({
       </div>
 
       {/* Preview Content */}
-      <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
+      <div
+        ref={containerRef}
+        className="flex-1 flex items-center justify-center p-8 overflow-hidden"
+      >
         {isFullScreen ? (
           <div className="w-full h-full overflow-auto">{children}</div>
         ) : (
-          <div className="relative">
+          <div
+            className="relative transition-transform duration-200"
+            style={{
+              transform: `scale(${viewportScale})`,
+              transformOrigin: "center center",
+            }}
+          >
             {/* Device Frame */}
             <div
               className="relative bg-zinc-950 rounded-[2.5rem] p-3 shadow-2xl"
@@ -251,8 +290,8 @@ export function PreviewMode({
                   style={{
                     width: contentWidth,
                     height: contentHeight || "auto",
-                    minHeight: frameHeight / scale,
-                    transform: `scale(${scale})`,
+                    minHeight: frameHeight / contentScale,
+                    transform: `scale(${contentScale})`,
                     transformOrigin: "top left",
                   }}
                 >
@@ -262,7 +301,7 @@ export function PreviewMode({
             </div>
 
             {/* Device Label */}
-            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-xs">
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-xs whitespace-nowrap">
               {selectedDevice.name} (
               {isRotated
                 ? `${frameHeight}×${frameWidth}`

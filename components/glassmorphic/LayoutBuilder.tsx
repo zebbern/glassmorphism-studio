@@ -24,6 +24,7 @@ import {
   Group,
   Ungroup,
   LayoutTemplate,
+  ChevronDown,
 } from "lucide-react";
 import {
   GridCell,
@@ -46,6 +47,12 @@ import { cn } from "@/lib/utils";
 import { PreviewMode } from "./PreviewMode";
 import { TemplatesGallery } from "./TemplatesGallery";
 import { PropsEditor } from "./PropsEditor";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Import template components
 import { ProfileCard, ProfileCardContent } from "./cards/ProfileCard";
@@ -137,6 +144,9 @@ export function LayoutBuilder({
     applyLayout,
     selectCell,
     updateCell,
+    addCell,
+    removeCell,
+    swapCells,
     clearCell,
     placeComponent,
     resetLayout,
@@ -146,6 +156,7 @@ export function LayoutBuilder({
     canRedo,
     undo,
     redo,
+    findPositionForNewBox,
   } = useLayoutBuilder("grid-2x2");
 
   const [showTemplates, setShowTemplates] = useState(true);
@@ -169,6 +180,30 @@ export function LayoutBuilder({
   );
   const [showPreview, setShowPreview] = useState(false);
   const [showTemplatesGallery, setShowTemplatesGallery] = useState(false);
+
+  // Compute empty grid slots that can accept drops (after cells are deleted)
+  const emptyGridSlots = useMemo(() => {
+    // Build a set of all occupied coordinates
+    const occupied = new Set<string>();
+    for (const cell of layout.cells) {
+      for (let r = cell.row; r < cell.row + cell.rowSpan; r++) {
+        for (let c = cell.col; c < cell.col + cell.colSpan; c++) {
+          occupied.add(`${r}-${c}`);
+        }
+      }
+    }
+
+    // Find contiguous empty regions (simplified: 1x1 slots for now)
+    const emptySlots: { row: number; col: number }[] = [];
+    for (let r = 0; r < layout.rows; r++) {
+      for (let c = 0; c < layout.cols; c++) {
+        if (!occupied.has(`${r}-${c}`)) {
+          emptySlots.push({ row: r, col: c });
+        }
+      }
+    }
+    return emptySlots;
+  }, [layout.cells, layout.rows, layout.cols]);
 
   // Responsive breakpoints state
   type Breakpoint = "mobile" | "tablet" | "desktop";
@@ -656,7 +691,7 @@ export function LayoutBuilder({
       const gridHTML = `
 <div class="layout-grid" style="
   display: grid;
-  grid-template-rows: repeat(${layout.rows}, minmax(120px, 1fr));
+  grid-template-rows: repeat(${layout.rows}, minmax(60px, 1fr));
   grid-template-columns: repeat(${layout.cols}, 1fr);
   gap: ${layout.gap}px;
   padding: 1rem;
@@ -763,7 +798,7 @@ export function GlassmorphicLayout() {
     <div
       className="grid min-h-screen p-4"
       style={{
-        gridTemplateRows: "repeat(${layout.rows}, minmax(120px, 1fr))",
+        gridTemplateRows: "repeat(${layout.rows}, minmax(60px, 1fr))",
         gridTemplateColumns: "repeat(${layout.cols}, 1fr)",
         gap: "${layout.gap}px",
       }}
@@ -1105,18 +1140,11 @@ ${cellsJsx}
         onClose={() => setShowPreview(false)}
         contentWidth={1200}
       >
-        <div
-          className="w-full min-h-full p-4"
-          style={{
-            background: gradientSettings.enabled
-              ? `linear-gradient(${gradientSettings.direction}deg, ${gradientSettings.startColor}, ${gradientSettings.endColor})`
-              : inputColor,
-          }}
-        >
+        <div className="w-full min-h-full p-4">
           <div
             className="grid gap-4"
             style={{
-              gridTemplateRows: `repeat(${layout.rows}, minmax(100px, auto))`,
+              gridTemplateRows: `repeat(${layout.rows}, minmax(50px, auto))`,
               gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
               gap: `${layout.gap}px`,
             }}
@@ -1235,33 +1263,51 @@ ${cellsJsx}
             {/* Add Box Button */}
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    // Add a new cell at the next available position
-                    const newId = `cell-${Date.now()}`;
-                    const newRow =
-                      layout.cells.length > 0
-                        ? Math.max(
-                            ...layout.cells.map((c) => c.row + c.rowSpan),
-                          )
-                        : 0;
-                    const newCell: GridCell = {
-                      id: newId,
-                      row: Math.min(newRow, layout.rows - 1),
-                      col: 0,
-                      rowSpan: 1,
-                      colSpan: Math.min(4, layout.cols), // Default to 1/3 width (on 12-col grid)
-                    };
-                    applyLayout({
-                      ...layout,
-                      rows: Math.max(layout.rows, newRow + 1),
-                      cells: [...layout.cells, newCell],
-                    });
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/30 text-sm text-cyan-400 transition-colors"
-                >
-                  <Plus className="w-4 h-4" /> Add Box
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/30 text-sm text-cyan-400 transition-colors">
+                      <Plus className="w-4 h-4" /> Add Box{" "}
+                      <ChevronDown className="w-3 h-3 ml-1 opacity-50" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-48 bg-slate-900 border-white/10 text-white"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const { row, col } = findPositionForNewBox(4, 2);
+                        addCell({ row, col, rowSpan: 2, colSpan: 4 });
+                      }}
+                    >
+                      Standard (1/3 Width)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const { row, col } = findPositionForNewBox(12, 2);
+                        addCell({ row, col, rowSpan: 2, colSpan: 12 });
+                      }}
+                    >
+                      Full Width
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const { row, col } = findPositionForNewBox(6, 2);
+                        addCell({ row, col, rowSpan: 2, colSpan: 6 });
+                      }}
+                    >
+                      Half Width
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const { row, col } = findPositionForNewBox(4, 4);
+                        addCell({ row, col, rowSpan: 4, colSpan: 4 });
+                      }}
+                    >
+                      Tall Box
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <span className="text-xs text-white/40">
                   {layout.cells.length} box
                   {layout.cells.length !== 1 ? "es" : ""}
@@ -1280,7 +1326,7 @@ ${cellsJsx}
                   className="absolute inset-0 pointer-events-none z-10 p-4"
                   style={{
                     display: "grid",
-                    gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
+                    gridTemplateRows: `repeat(${layout.rows}, minmax(60px, 1fr))`,
                     gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
                     gap: `${layout.gap}px`,
                   }}
@@ -1302,7 +1348,7 @@ ${cellsJsx}
                 ref={gridRef}
                 className="grid min-h-[400px] rounded-lg overflow-hidden bg-transparent p-4 border border-dashed border-white/10"
                 style={{
-                  gridTemplateRows: `repeat(${layout.rows}, minmax(120px, 1fr))`,
+                  gridTemplateRows: `repeat(${layout.rows}, minmax(60px, 1fr))`,
                   gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
                   gap: `${layout.gap}px`,
                 }}
@@ -1356,26 +1402,7 @@ ${cellsJsx}
                         if (moveCellId) {
                           if (moveCellId === cell.id) return;
 
-                          const sourceCell = layout.cells.find(
-                            (c) => c.id === moveCellId,
-                          );
-                          if (sourceCell) {
-                            // Swap coordinates between source and target
-                            const updatedCells = layout.cells.map((c) => {
-                              if (c.id === moveCellId) {
-                                return { ...c, row: cell.row, col: cell.col };
-                              }
-                              if (c.id === cell.id) {
-                                return {
-                                  ...c,
-                                  row: sourceCell.row,
-                                  col: sourceCell.col,
-                                };
-                              }
-                              return c;
-                            });
-                            applyLayout({ ...layout, cells: updatedCells });
-                          }
+                          swapCells(moveCellId, cell.id);
                           return;
                         }
 
@@ -1498,14 +1525,7 @@ ${cellsJsx}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Remove the cell entirely from the layout
-                              applyLayout({
-                                ...layout,
-                                cells: layout.cells.filter(
-                                  (c) => c.id !== cell.id,
-                                ),
-                              });
-                              selectCell(null as unknown as string);
+                              removeCell(cell.id);
                             }}
                             title="Delete Box"
                             className="p-1.5 rounded-md bg-red-500/80 text-white hover:bg-red-500 transition-colors"
@@ -1529,6 +1549,68 @@ ${cellsJsx}
                     </div>
                   );
                 })}
+
+                {/* Empty Grid Slot Drop Zones - allows dropping into deleted spaces */}
+                {emptyGridSlots.map((slot) => (
+                  <div
+                    key={`empty-${slot.row}-${slot.col}`}
+                    className="rounded-lg border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/10 hover:border-cyan-400/50 transition-all cursor-pointer flex items-center justify-center"
+                    style={{
+                      gridRow: `${slot.row + 1} / span 1`,
+                      gridColumn: `${slot.col + 1} / span 1`,
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add(
+                        "ring-2",
+                        "ring-cyan-400",
+                        "bg-cyan-400/10",
+                      );
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove(
+                        "ring-2",
+                        "ring-cyan-400",
+                        "bg-cyan-400/10",
+                      );
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove(
+                        "ring-2",
+                        "ring-cyan-400",
+                        "bg-cyan-400/10",
+                      );
+
+                      // Handle template drop - create a new cell at this position with the component
+                      const templateId = e.dataTransfer.getData(
+                        "templateId",
+                      ) as ComponentTemplateId;
+                      if (templateId) {
+                        const template = getTemplateInfo(templateId);
+                        addCell({
+                          row: slot.row,
+                          col: slot.col,
+                          rowSpan: 2,
+                          colSpan: 4,
+                          componentId: templateId,
+                          content: template?.defaultContent,
+                        });
+                      }
+                    }}
+                    onClick={() => {
+                      // Click to add a new cell here
+                      addCell({
+                        row: slot.row,
+                        col: slot.col,
+                        rowSpan: 2,
+                        colSpan: 4,
+                      });
+                    }}
+                  >
+                    <Plus className="w-4 h-4 text-white/20" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

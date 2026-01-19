@@ -10,153 +10,7 @@ import type {
   LayoutPreset,
 } from "@/types/glassmorphic";
 
-// Import layout presets inline to avoid module resolution issues
-const generatePresetId = () => Math.random().toString(36).substring(2, 9);
-
-// Default layout presets defined inline - ALL 6 presets - SYNCED WITH lib/layout-presets.ts
-const defaultLayoutPresets: LayoutPreset[] = [
-  {
-    id: "grid-2x2",
-    name: "2×2 Grid",
-    description: "Simple 2x2 grid layout for balanced content",
-    icon: "⊞",
-    layout: {
-      id: generatePresetId(),
-      name: "2×2 Grid",
-      rows: 2,
-      cols: 12,
-      gap: 16,
-      cells: [
-        { id: generatePresetId(), row: 0, col: 0, rowSpan: 1, colSpan: 6 },
-        { id: generatePresetId(), row: 0, col: 6, rowSpan: 1, colSpan: 6 },
-        { id: generatePresetId(), row: 1, col: 0, rowSpan: 1, colSpan: 6 },
-        { id: generatePresetId(), row: 1, col: 6, rowSpan: 1, colSpan: 6 },
-      ],
-    },
-  },
-  {
-    id: "row-3",
-    name: "3-Column Row",
-    description: "Three equal columns in a single row",
-    icon: "☰",
-    layout: {
-      id: generatePresetId(),
-      name: "3-Column Row",
-      rows: 1,
-      cols: 12,
-      gap: 16,
-      cells: [
-        { id: generatePresetId(), row: 0, col: 0, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 0, col: 4, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 0, col: 8, rowSpan: 1, colSpan: 4 },
-      ],
-    },
-  },
-  {
-    id: "masonry",
-    name: "Masonry",
-    description: "Pinterest-style staggered layout",
-    icon: "▤",
-    layout: {
-      id: generatePresetId(),
-      name: "Masonry",
-      rows: 3,
-      cols: 12,
-      gap: 16,
-      cells: [
-        { id: generatePresetId(), row: 0, col: 0, rowSpan: 2, colSpan: 4 },
-        { id: generatePresetId(), row: 0, col: 4, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 0, col: 8, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 1, col: 4, rowSpan: 2, colSpan: 4 },
-        { id: generatePresetId(), row: 1, col: 8, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 2, col: 0, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 2, col: 8, rowSpan: 1, colSpan: 4 },
-      ],
-    },
-  },
-  {
-    id: "dashboard",
-    name: "Dashboard",
-    description: "Stats header with content grid below",
-    icon: "📊",
-    layout: {
-      id: generatePresetId(),
-      name: "Dashboard",
-      rows: 3,
-      cols: 12,
-      gap: 16,
-      cells: [
-        // Top row - 4 stat widgets
-        { id: generatePresetId(), row: 0, col: 0, rowSpan: 1, colSpan: 3 },
-        { id: generatePresetId(), row: 0, col: 3, rowSpan: 1, colSpan: 3 },
-        { id: generatePresetId(), row: 0, col: 6, rowSpan: 1, colSpan: 3 },
-        { id: generatePresetId(), row: 0, col: 9, rowSpan: 1, colSpan: 3 },
-        // Main content - large chart
-        { id: generatePresetId(), row: 1, col: 0, rowSpan: 2, colSpan: 9 },
-        // Sidebar widgets
-        { id: generatePresetId(), row: 1, col: 3, rowSpan: 1, colSpan: 3 },
-        { id: generatePresetId(), row: 2, col: 3, rowSpan: 1, colSpan: 3 },
-      ],
-    },
-  },
-  {
-    id: "landing-hero",
-    name: "Landing Hero",
-    description: "Hero section with feature cards",
-    icon: "🚀",
-    layout: {
-      id: generatePresetId(),
-      name: "Landing Hero",
-      rows: 2,
-      cols: 12,
-      gap: 24,
-      cells: [
-        // Hero - full width top
-        { id: generatePresetId(), row: 0, col: 0, rowSpan: 1, colSpan: 12 },
-        // Feature cards below
-        { id: generatePresetId(), row: 1, col: 0, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 1, col: 4, rowSpan: 1, colSpan: 4 },
-        { id: generatePresetId(), row: 1, col: 8, rowSpan: 1, colSpan: 4 },
-      ],
-    },
-  },
-  {
-    id: "sidebar-main",
-    name: "Sidebar + Main",
-    description: "Sidebar navigation with main content area",
-    icon: "◧",
-    layout: {
-      id: generatePresetId(),
-      name: "Sidebar + Main",
-      rows: 2,
-      cols: 12,
-      gap: 16,
-      cells: [
-        // Sidebar - spans full height
-        { id: generatePresetId(), row: 0, col: 0, rowSpan: 2, colSpan: 3 },
-        // Main content area
-        { id: generatePresetId(), row: 0, col: 3, rowSpan: 1, colSpan: 9 },
-        // Bottom content
-        { id: generatePresetId(), row: 1, col: 3, rowSpan: 1, colSpan: 6 },
-        { id: generatePresetId(), row: 1, col: 9, rowSpan: 1, colSpan: 3 },
-      ],
-    },
-  },
-];
-
-const getDefaultLayoutInline = (): GridLayout => ({
-  id: generatePresetId(),
-  name: "2×2 Grid",
-  rows: 2,
-  cols: 12,
-  gap: 16,
-  cells: [
-    { id: generatePresetId(), row: 0, col: 0, rowSpan: 1, colSpan: 6 },
-    { id: generatePresetId(), row: 0, col: 6, rowSpan: 1, colSpan: 6 },
-    { id: generatePresetId(), row: 1, col: 0, rowSpan: 1, colSpan: 6 },
-    { id: generatePresetId(), row: 1, col: 6, rowSpan: 1, colSpan: 6 },
-  ],
-});
+import { layoutPresets } from "@/lib/layout-presets";
 
 // Generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -200,6 +54,7 @@ interface UseLayoutBuilderReturn {
     content?: Record<string, unknown>,
   ) => void;
   moveComponent: (fromCellId: string, toCellId: string) => void;
+  swapCells: (id1: string, id2: string) => void;
 
   // Drag & drop
   startDrag: () => void;
@@ -210,6 +65,10 @@ interface UseLayoutBuilderReturn {
   getCellAt: (row: number, col: number) => GridCell | undefined;
   isCellOccupied: (row: number, col: number) => boolean;
   getEmptyCells: () => DropZone[];
+  findPositionForNewBox: (
+    colSpan: number,
+    rowSpan: number,
+  ) => { row: number; col: number };
 
   // Utilities
   resetLayout: () => void;
@@ -221,10 +80,15 @@ export function useLayoutBuilder(
 ): UseLayoutBuilderReturn {
   // Get initial layout from preset
   const getInitialLayout = useCallback((): GridLayout => {
-    const preset = defaultLayoutPresets.find(
+    const preset = layoutPresets.find(
       (p: LayoutPreset) => p.id === initialPreset,
     );
-    return preset?.layout || getDefaultLayoutInline();
+    const layout = preset?.layout || layoutPresets[0].layout;
+    return {
+      ...layout,
+      id: generateId(),
+      cells: layout.cells.map((c) => ({ ...c, id: generateId() })),
+    };
   }, [initialPreset]);
 
   const [layout, setLayoutInternal] = useState<GridLayout>(getInitialLayout);
@@ -243,8 +107,28 @@ export function useLayoutBuilder(
   const updateLayoutWithHistory = useCallback(
     (updater: GridLayout | ((prev: GridLayout) => GridLayout)) => {
       setLayoutInternal((prev) => {
-        const newLayout =
-          typeof updater === "function" ? updater(prev) : updater;
+        let newLayout = typeof updater === "function" ? updater(prev) : updater;
+
+        // Auto-cleanup: Adjust rows to fit content
+        // This satisfies "if a line has no boxes then the page should adjust accordingly"
+        if (newLayout.cells.length > 0) {
+          const maxUsedRow = Math.max(
+            ...newLayout.cells.map((c) => c.row + c.rowSpan),
+          );
+          // Ensure at least 4 rows (equivalent to 2 "logical" rows in new standard)
+          // to maintain a decent canvas size, but shrink if huge empty space exists.
+          // Note: If user creates a huge gap, this will still respect the bottom-most cell.
+          const targetRows = Math.max(4, maxUsedRow);
+
+          if (newLayout.rows !== targetRows) {
+            newLayout = { ...newLayout, rows: targetRows };
+          }
+        } else {
+          // Reset to default min rows if empty
+          if (newLayout.rows !== 4) {
+            newLayout = { ...newLayout, rows: 4 };
+          }
+        }
 
         // Push to history
         setHistory((prevHistory) => {
@@ -294,11 +178,13 @@ export function useLayoutBuilder(
   // Load a preset layout
   const loadPreset = useCallback(
     (presetId: LayoutPresetId) => {
-      const preset = defaultLayoutPresets.find(
-        (p: LayoutPreset) => p.id === presetId,
-      );
+      const preset = layoutPresets.find((p: LayoutPreset) => p.id === presetId);
       if (preset) {
-        updateLayoutWithHistory({ ...preset.layout, id: generateId() });
+        updateLayoutWithHistory({
+          ...preset.layout,
+          id: generateId(),
+          cells: preset.layout.cells.map((c) => ({ ...c, id: generateId() })),
+        });
         setSelectedCellId(null);
       }
     },
@@ -444,6 +330,54 @@ export function useLayoutBuilder(
     [updateLayoutWithHistory],
   );
 
+  // Swap position of two cells safely
+  const swapCells = useCallback(
+    (id1: string, id2: string) => {
+      updateLayoutWithHistory((prev: GridLayout) => {
+        const cell1 = prev.cells.find((c) => c.id === id1);
+        const cell2 = prev.cells.find((c) => c.id === id2);
+
+        // If one is missing (shouldn't happen), abort
+        if (!cell1 || !cell2) return prev;
+
+        const newCells = prev.cells.map((c) => {
+          if (c.id === id1) {
+            return { ...c, row: cell2.row, col: cell2.col };
+          }
+          if (c.id === id2) {
+            return { ...c, row: cell1.row, col: cell1.col };
+          }
+          return c;
+        });
+
+        // Validate no overlaps
+        const hasCollision = newCells.some((c1, i) => {
+          return newCells.some((c2, j) => {
+            if (i === j) return false;
+            // AABB collision
+            return (
+              c1.row < c2.row + c2.rowSpan &&
+              c1.row + c1.rowSpan > c2.row &&
+              c1.col < c2.col + c2.colSpan &&
+              c1.col + c1.colSpan > c2.col
+            );
+          });
+        });
+
+        if (hasCollision) {
+          console.warn("Swap prevented due to collision");
+          return prev;
+        }
+
+        return {
+          ...prev,
+          cells: newCells,
+        };
+      });
+    },
+    [updateLayoutWithHistory],
+  );
+
   // Drag & drop handlers
   const startDrag = useCallback(() => setIsDragging(true), []);
   const endDrag = useCallback(() => {
@@ -486,9 +420,47 @@ export function useLayoutBuilder(
     return empty;
   }, [layout.rows, layout.cols, isCellOccupied]);
 
+  // Find first available position for a box of given size
+  const findPositionForNewBox = useCallback(
+    (colSpan: number, rowSpan: number) => {
+      const currentMaxRow =
+        layout.cells.length > 0
+          ? Math.max(...layout.cells.map((c) => c.row + c.rowSpan))
+          : 0;
+      // Allow searching past current rows to find space or append
+      const scanLimit = Math.max(layout.rows, currentMaxRow) + rowSpan + 1;
+
+      for (let r = 0; r < scanLimit; r++) {
+        for (let c = 0; c <= layout.cols - colSpan; c++) {
+          let fits = true;
+          for (let ir = 0; ir < rowSpan; ir++) {
+            for (let ic = 0; ic < colSpan; ic++) {
+              if (isCellOccupied(r + ir, c + ic)) {
+                fits = false;
+                break;
+              }
+            }
+            if (!fits) break;
+          }
+
+          if (fits) {
+            return { row: r, col: c };
+          }
+        }
+      }
+      return { row: currentMaxRow, col: 0 };
+    },
+    [layout.rows, layout.cols, layout.cells, isCellOccupied],
+  );
+
   // Reset to default layout
   const resetLayout = useCallback(() => {
-    setLayout(getDefaultLayoutInline());
+    const layout = layoutPresets[0].layout;
+    setLayout({
+      ...layout,
+      id: generateId(),
+      cells: layout.cells.map((c) => ({ ...c, id: generateId() })),
+    });
     setSelectedCellId(null);
   }, []);
 
@@ -528,12 +500,14 @@ export function useLayoutBuilder(
     clearCell,
     placeComponent,
     moveComponent,
+    swapCells,
     startDrag,
     endDrag,
     setDragOverCell,
     getCellAt,
     isCellOccupied,
     getEmptyCells,
+    findPositionForNewBox,
     resetLayout,
     exportLayout,
   };
